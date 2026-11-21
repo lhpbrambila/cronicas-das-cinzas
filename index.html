@@ -937,7 +937,7 @@
         <div class="status-pill" title="Velocidade travada em tempo real">
           <span>Ritmo: 1x (Tempo Real)</span>
         </div>
-        <button type="button" class="btn-sm" id="btnOpenSaveModal">Salvamento</button>
+        <button type="button" class="btn-sm" id="btnOpenSaveModal">Exportar / Importar Código</button>
         <button type="button" class="btn-sm" id="btnOpenGuideModal">Guia e Sites</button>
         <button type="button" class="btn-sm btn-danger" id="btnOpenResetModal">Novo Juramento</button>
       </div>
@@ -1211,18 +1211,18 @@
        ======================================================================== -->
   <div class="modal-backdrop" id="saveModal" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle">
     <div class="modal-card">
-      <h2 class="modal-title" id="saveModalTitle">Arquivos da Crônica (JSON)</h2>
+      <h2 class="modal-title" id="saveModalTitle">Código Portátil da Crônica</h2>
       <p class="serif-quote">
-        O progresso é salvo automaticamente no navegador. Exporte o pergaminho em texto para guardar cópia ou transferi-lo.
+        O progresso é salvo automaticamente neste navegador. Gere e copie o código codificado abaixo para guardar uma cópia segura ou restaurar sua jornada em qualquer dispositivo.
       </p>
       <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <button type="button" id="btnExportSave">Gerar Código de Exportação</button>
-        <button type="button" id="btnCopySave">Copiar para Área de Transferência</button>
-        <button type="button" class="btn-primary" id="btnImportSave">Importar Código Colado</button>
+        <button type="button" id="btnExportSave">Gerar Código Portátil</button>
+        <button type="button" id="btnCopySave">Copiar Código</button>
+        <button type="button" class="btn-primary" id="btnImportSave">Restaurar Código Colado</button>
       </div>
       <div class="field-group">
-        <label class="field-label" for="saveJsonArea">Conteúdo JSON do Salvamento</label>
-        <textarea id="saveJsonArea" placeholder="Cole aqui um código JSON exportado para restaurar uma crônica..."></textarea>
+        <label class="field-label" for="saveJsonArea">Código de Salvamento (Base64 / JSON)</label>
+        <textarea id="saveJsonArea" placeholder="Clique em 'Gerar Código Portátil' para exportar ou cole um código salvo aqui para restaurar..."></textarea>
       </div>
       <div class="modal-footer">
         <button type="button" id="btnCloseSaveModal">Fechar</button>
@@ -2372,6 +2372,15 @@
         document.getElementById('subStepPct').textContent = `${subPct}%`;
         document.getElementById('subStepBar').style.width = `${subPct}%`;
         document.getElementById('hudTacticalStance').textContent = game.sim.stance || 'Vigilante';
+
+        // Painel de Adversário quando em Combate
+        const enemyCard = document.getElementById('enemyCard');
+        const en = game.sim.enemy;
+        if (game.sim.state === 'COMBAT' && en) {
+          enemyCard.style.display = 'flex';
+          const eHp = Math.max(0, Math.round(en.hp));
+          const ePct = Math.min(100, Math.max(0, (eHp / Math.max(1, en.maxHp)) * 100));
+          document.getElementById('enemyName').textContent = en.name;
           document.getElementById('enemyMeta').textContent = `ATQ ${en.atk} · DEF ${en.def}`;
           document.getElementById('enemyHpText').textContent = `${eHp} / ${en.maxHp}`;
           document.getElementById('enemyHpBar').style.width = `${ePct}%`;
@@ -2622,9 +2631,34 @@
         });
 
         // Modal Salvamento / Exportar / Importar
+        function encodeSaveCode(stateObj) {
+          const jsonStr = JSON.stringify(stateObj);
+          const bytes = new TextEncoder().encode(jsonStr);
+          let binStr = '';
+          for (let i = 0; i < bytes.length; i++) {
+            binStr += String.fromCharCode(bytes[i]);
+          }
+          return 'CC1:' + btoa(binStr);
+        }
+
+        function decodeSaveCode(rawInput) {
+          const trimmed = rawInput.trim();
+          if (trimmed.startsWith('{')) {
+            return JSON.parse(trimmed);
+          }
+          const payload = trimmed.startsWith('CC1:') ? trimmed.slice(4) : trimmed;
+          const binStr = atob(payload);
+          const bytes = new Uint8Array(binStr.length);
+          for (let i = 0; i < binStr.length; i++) {
+            bytes[i] = binStr.charCodeAt(i);
+          }
+          const jsonStr = new TextDecoder().decode(bytes);
+          return JSON.parse(jsonStr);
+        }
+
         document.getElementById('btnOpenSaveModal').addEventListener('click', () => {
           if (game) {
-            document.getElementById('saveJsonArea').value = JSON.stringify(game, null, 2);
+            document.getElementById('saveJsonArea').value = encodeSaveCode(game);
           }
           document.getElementById('saveModal').classList.add('open');
         });
@@ -2636,18 +2670,43 @@
         document.getElementById('btnExportSave').addEventListener('click', () => {
           if (!game) return;
           saveToLocalStorage(game);
-          document.getElementById('saveJsonArea').value = JSON.stringify(game, null, 2);
-          showNotice('Código JSON atualizado no campo de exportação.');
+          document.getElementById('saveJsonArea').value = encodeSaveCode(game);
+          showNotice('Código portátil atualizado no campo abaixo.');
         });
 
         document.getElementById('btnCopySave').addEventListener('click', () => {
           const area = document.getElementById('saveJsonArea');
+          if (!area.value.trim() && game) {
+            area.value = encodeSaveCode(game);
+          }
           area.select();
           try {
             document.execCommand('copy');
-            showNotice('Código de salvamento copiado.');
+            showNotice('Código de salvamento copiado para a área de transferência.');
           } catch (err) {
-            showNotice('Selecione o texto na caixa e copie manualmente.');
+            showNotice('Selecione o código na caixa e copie manualmente.');
+          }
+        });
+
+        document.getElementById('btnImportSave').addEventListener('click', () => {
+          const raw = document.getElementById('saveJsonArea').value.trim();
+          if (!raw) {
+            showNotice('Cole um código de salvamento válido antes de restaurar.');
+            return;
+          }
+          try {
+            const imported = decodeSaveCode(raw);
+            if (!imported || !imported.character || !imported.sim || !imported.skills) {
+              throw new Error('Estrutura inválida');
+            }
+            game = imported;
+            saveToLocalStorage(game);
+            closeCreationModal();
+            document.getElementById('saveModal').classList.remove('open');
+            renderHud();
+            showNotice('Progresso restaurado com sucesso a partir do código.');
+          } catch (err) {
+            showNotice('Falha ao restaurar: o código fornecido é inválido ou está corrompido.');
           }
         });
 
