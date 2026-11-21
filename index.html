@@ -934,8 +934,9 @@
           <span class="status-dot" id="simStatusDot"></span>
           <span id="simStatusText">Simulação Ativa</span>
         </div>
-        <button type="button" class="btn-sm" id="btnTogglePause">Pausar</button>
-        <button type="button" class="btn-sm" id="btnSpeedToggle">Velocidade: 1x</button>
+        <div class="status-pill" title="Velocidade travada em tempo real">
+          <span>Ritmo: 1x (Tempo Real)</span>
+        </div>
         <button type="button" class="btn-sm" id="btnOpenSaveModal">Salvamento</button>
         <button type="button" class="btn-sm" id="btnOpenGuideModal">Guia e Sites</button>
         <button type="button" class="btn-sm btn-danger" id="btnOpenResetModal">Novo Juramento</button>
@@ -1037,9 +1038,9 @@
             </div>
           </div>
 
-          <div class="toggles-row">
-            <button type="button" class="btn-sm active-toggle" id="btnAutoUpgrade">Auto-Aprimorar: Ligado</button>
-            <button type="button" class="btn-sm active-toggle" id="btnAutoAdvance">Auto-Avançar: Ligado</button>
+          <div class="derived-item" style="background: var(--bg-elevated);">
+            <span>Conduta Autônoma</span>
+            <strong style="color: var(--accent-sage);">100% Autogerida</strong>
           </div>
 
           <div class="region-selector" id="regionListContainer"></div>
@@ -1069,6 +1070,20 @@
                 <div class="bar-fill fill-action" id="stateProgressBar" style="width: 0%"></div>
               </div>
             </div>
+            <div class="bar-row" style="margin-top: 4px;">
+              <div class="bar-meta">
+                <span id="subStepLabel">Sub-etapa: Leitura de Trilha</span>
+                <strong id="subStepPct">0%</strong>
+              </div>
+              <div class="bar-track thin">
+                <div class="bar-fill fill-forging" id="subStepBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="derived-item" style="background: var(--bg-input);">
+            <span>Postura Tática (IA)</span>
+            <strong id="hudTacticalStance" style="color: var(--accent-gold);">Vigilante</strong>
           </div>
 
           <!-- Painel de Adversário quando em Combate -->
@@ -1238,7 +1253,7 @@
     <div class="modal-card">
       <h2 class="modal-title" id="guideModalTitle">Crônica das Cinzas — Guia e Google Sites</h2>
       <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
-        <p><strong style="color: var(--text-primary);">Simulação Autônoma:</strong> O personagem explora territórios, enfrenta ameaças, recua quando a vitalidade cai de forma crítica, repousa, aprimora armas/armaduras/relíquias, eleva disciplinas e avança de patamar sem exigir cliques contínuos.</p>
+        <p><strong style="color: var(--text-primary);">Simulação 100% Zero-Player:</strong> Uma vez iniciado o juramento, toda decisão pertence exclusivamente ao peregrino: escolha de postura tática, recuo estratégico, descanso, forja de equipamentos, estudo de disciplinas, distribuição de atributos ao subir de nível e marcha para novas regiões ocorrem em ritmo solene e autônomo (1x em tempo real).</p>
         <p><strong style="color: var(--text-primary);">Progresso Offline:</strong> Ao fechar ou recarregar a página, o tempo decorrido é calculado com base no carimbo real de horário (até 24 horas por retorno), simulando encontros, recuperações, recursos e conquistas.</p>
         <p><strong style="color: var(--text-primary);">Como incorporar no Google Sites:</strong></p>
         <ol style="padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
@@ -1493,8 +1508,7 @@
          ESTADO DO JOGO E INICIALIZAÇÃO
          ======================================================================== */
       let game = null;
-      let simSpeed = 1;
-      let isPaused = false;
+      const SIM_SPEED = 1; // Travado estritamente em 1x (Tempo Real)
       let activeLogFilter = 'all';
       let lastFrameTime = performance.now();
       let saveAccumulator = 0;
@@ -1558,9 +1572,12 @@
             autoAdvance: true
           },
           sim: {
-            state: 'EXPLORING', // EXPLORING | COMBAT | RESTING | FORGING | ADVANCING
+            state: 'EXPLORING', // EXPLORING | COMBAT | RESTING | FORGING | ADVANCING | STUDYING
             progress: 0,      // 0.0 a 1.0
-            duration: 5.0,    // segundos simulados necessários para concluir ação atual
+            duration: 24.0,   // segundos simulados necessários para concluir ação atual
+            subProgress: 0,   // 0.0 a 1.0 para sub-etapa encadeada
+            subLabel: 'Sondando vestígios na fuligem',
+            stance: 'Equilibrada',
             detail: 'Sondando trilhas encobertas por fuligem...',
             enemy: null,
             forgingSlot: null
@@ -1697,33 +1714,49 @@
          ======================================================================== */
       function grantXp(state, rawXp, offlineCollector) {
         const rRunas = getSkillRank(state, 'leitura_de_runas');
-        const mult = 1 + (rRunas - 1) * 0.06;
-        let gained = Math.max(1, Math.round(rawXp * mult));
+        const mult = 1 + (rRunas - 1) * 0.04;
+        // Ritmo solene: ganho de XP reduzido para progressão longa
+        let gained = Math.max(1, Math.round(rawXp * 0.42 * mult));
         state.character.xp += gained;
 
         while (state.character.xp >= state.character.xpNext) {
           state.character.xp -= state.character.xpNext;
           state.character.level += 1;
-          state.character.xpNext = Math.round(100 * Math.pow(1.24, state.character.level - 1));
+          state.character.xpNext = Math.round(160 * Math.pow(1.30, state.character.level - 1));
 
-          // Aumento automático equilibrado de atributos base conforme vocação
+          // Distribuição 100% autônoma de atributos conforme afinidade e necessidade de sobrevivência
           const voc = VOCATIONS[state.character.vocationId] || VOCATIONS.penitent;
+          const orig = ORIGINS[state.character.originId] || ORIGINS.winterborn;
           const attrOrder = ['FOR', 'DES', 'VIT', 'INT', 'VON'];
+
+          let chosenAttr = attrOrder[0];
+          let bestScore = -1;
           for (const k of attrOrder) {
-            const vBonus = voc.mods[k] >= 2 ? 1 : 0;
-            if (vBonus > 0) state.character.baseAttrs[k] += 1;
+            const affinity = (voc.mods[k] || 0) * 1.6 + (orig.mods[k] || 0) * 1.1;
+            const survivalNeed = (k === 'VIT' || k === 'VON') ? 1.2 : 0;
+            const balancePenalty = state.character.baseAttrs[k] * 0.12;
+            const score = affinity + survivalNeed - balancePenalty + Math.random() * 0.4;
+            if (score > bestScore) {
+              bestScore = score;
+              chosenAttr = k;
+            }
           }
-          const primaryKey = attrOrder[(state.character.level - 1) % attrOrder.length];
-          state.character.baseAttrs[primaryKey] += 1;
+          state.character.baseAttrs[chosenAttr] += 1;
+
+          // Segundo ponto cíclico baseado na vocação
+          const secondaryAttr = attrOrder.reduce((best, k) =>
+            (voc.mods[k] || 0) > (voc.mods[best] || 0) ? k : best
+          , 'VIT');
+          state.character.baseAttrs[secondaryAttr] += 1;
 
           const derived = computeDerivedStats(state);
           state.character.maxHp = derived.maxHp;
-          state.character.hp = Math.min(derived.maxHp, state.character.hp + Math.round(derived.maxHp * 0.35));
+          state.character.hp = Math.min(derived.maxHp, state.character.hp + Math.round(derived.maxHp * 0.30));
 
           addLog(
             state,
             'milestone',
-            `${state.character.name} alcançou o Nível ${state.character.level}.`,
+            `${state.character.name} alcançou o Nível ${state.character.level} e consolidou ${chosenAttr} e ${secondaryAttr}.`,
             offlineCollector
           );
         }
@@ -1734,13 +1767,13 @@
       function grantSkillXp(state, skillId, amount, offlineCollector) {
         const skill = state.skills.find(s => s.id === skillId);
         if (!skill) return;
-        const intBonus = 1 + (state.character.baseAttrs.INT - 5) * 0.025;
-        skill.xp += Math.max(1, Math.round(amount * intBonus));
+        const intBonus = 1 + (state.character.baseAttrs.INT - 5) * 0.02;
+        skill.xp += Math.max(0.2, amount * 0.35 * intBonus);
 
         while (skill.xp >= skill.xpNext) {
           skill.xp -= skill.xpNext;
           skill.rank += 1;
-          skill.xpNext = Math.round(100 * Math.pow(1.32, skill.rank - 1));
+          skill.xpNext = Math.round(150 * Math.pow(1.38, skill.rank - 1));
           addLog(
             state,
             'milestone',
@@ -1768,7 +1801,7 @@
       }
 
       function findUpgradeableSlot(state) {
-        if (!state.prefs.autoUpgrade) return null;
+        // Sempre autônomo: prioriza arma, depois armadura, depois relíquia
         const order = ['weapon', 'armor', 'relic'];
         for (const key of order) {
           const item = state.gear[key];
@@ -1819,27 +1852,33 @@
         const region = REGIONS[state.regionIndex] || REGIONS[0];
         if (state.regionMastery >= region.masteryGoal) {
           state.regionMastery = Math.max(0, state.regionMastery - region.masteryGoal);
-          state.character.rankProgress = Math.min(100, state.character.rankProgress + 35);
+          state.character.rankProgress = Math.min(100, state.character.rankProgress + 20);
 
           if (state.regionIndex + 1 < REGIONS.length) {
             const nextIdx = state.regionIndex + 1;
+            const nextRegion = REGIONS[nextIdx];
+            const derived = computeDerivedStats(state);
+            const combatRating = derived.physAtk + derived.arcanePower + derived.defense * 1.4;
+            const safeThreshold = 26 * nextRegion.threatPower;
+
             if (nextIdx > state.unlockedRegionMax) {
               state.unlockedRegionMax = nextIdx;
             }
-            if (state.prefs.autoAdvance) {
+
+            // IA decide marchar apenas quando possui poder de combate seguro para a próxima região
+            if (combatRating >= safeThreshold) {
               state.regionIndex = nextIdx;
-              const nextRegion = REGIONS[nextIdx];
               addLog(
                 state,
                 'milestone',
-                `Domínio alcançado. ${state.character.name} marchou para ${nextRegion.name} (${nextRegion.threatRoman}).`,
+                `Domínio concluído e aptidão confirmada. ${state.character.name} marchou autonomamente para ${nextRegion.name} (${nextRegion.threatRoman}).`,
                 offlineCollector
               );
             } else {
               addLog(
                 state,
                 'milestone',
-                `Marco regional concluído em ${region.name}. Nova região disponível para marcha.`,
+                `Marco concluído em ${region.name}, mas ${state.character.name} decidiu fortalecer-se antes de cruzar para ${nextRegion.name}.`,
                 offlineCollector
               );
             }
@@ -1848,7 +1887,7 @@
             addLog(
               state,
               'milestone',
-              `${state.character.name} susteve a vigília no Abismo do Juramento Quebrado.`,
+              `${state.character.name} susteve a vigília solitária no Abismo do Juramento Quebrado.`,
               offlineCollector
             );
           }
@@ -1864,24 +1903,44 @@
       }
 
       /* ========================================================================
-         MÁQUINA DE ESTADOS AUTÔNOMA (DELTA TIME)
+         MÁQUINA DE ESTADOS AUTÔNOMA (DELTA TIME — RITMO LENTO E SOLENE)
          ======================================================================== */
+      function evaluateAutonomousStance(state) {
+        const hpRatio = state.character.hp / Math.max(1, state.character.maxHp);
+        if (hpRatio >= 0.78) {
+          state.sim.stance = 'Ofensiva (Impulso)';
+        } else if (hpRatio >= 0.45) {
+          state.sim.stance = 'Vigilante (Equilíbrio)';
+        } else {
+          state.sim.stance = 'Cautelosa (Preservação)';
+        }
+        return state.sim.stance;
+      }
+
       function enterExploringState(state) {
         const derived = computeDerivedStats(state);
+        evaluateAutonomousStance(state);
         state.sim.state = 'EXPLORING';
         state.sim.progress = 0;
-        state.sim.duration = Math.max(2.2, 5.2 / derived.actionSpeed);
+        // ~20s a 28s base (pelo menos 5x mais lento que a versão original)
+        state.sim.duration = Math.max(18.0, 27.5 / Math.pow(derived.actionSpeed, 0.55));
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Leitura de rastros e cinzas';
         state.sim.enemy = null;
         state.sim.forgingSlot = null;
         const region = REGIONS[state.regionIndex] || REGIONS[0];
-        state.sim.detail = `Percorrendo ${region.name} em busca de vestígios ou embates...`;
+        state.sim.detail = `Percorrendo ${region.name} em marcha cautelosa...`;
       }
 
       function enterCombatState(state, offlineCollector) {
         const enemy = spawnEnemyForRegion(state);
+        evaluateAutonomousStance(state);
         state.sim.state = 'COMBAT';
         state.sim.progress = 0;
-        state.sim.duration = 1.6;
+        // Turnos de combate lentos (~5.5s por troca de golpes)
+        state.sim.duration = 5.6;
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Avaliação de guarda e brechas';
         state.sim.enemy = enemy;
         state.sim.forgingSlot = null;
         state.sim.detail = `Enfrentando ${enemy.name} (${enemy.hp} PV).`;
@@ -1889,9 +1948,13 @@
       }
 
       function enterRestingState(state, reasonText, offlineCollector) {
+        evaluateAutonomousStance(state);
         state.sim.state = 'RESTING';
         state.sim.progress = 0;
-        state.sim.duration = 3.2;
+        // Descanso contemplativo (~24s a 34s)
+        state.sim.duration = 28.0;
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Tratamento de ferimentos e vigília';
         state.sim.enemy = null;
         state.sim.forgingSlot = null;
         state.sim.detail = reasonText || 'Reunindo fôlego junto às cinzas frias...';
@@ -1900,22 +1963,43 @@
 
       function enterForgingState(state, slotKey) {
         const item = state.gear[slotKey];
+        evaluateAutonomousStance(state);
         state.sim.state = 'FORGING';
         state.sim.progress = 0;
-        state.sim.duration = 2.6;
+        // Forja meticulosa (~30s a 38s)
+        state.sim.duration = 32.0;
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Têmpera e ajuste de encaixes';
         state.sim.enemy = null;
         state.sim.forgingSlot = slotKey;
-        state.sim.detail = `Trabalhando sobre ${item.name} (${item.slotLabel})...`;
+        state.sim.detail = `Trabalhando pacientemente sobre ${item.name} (${item.slotLabel})...`;
       }
 
       function enterAdvancingState(state) {
         const region = REGIONS[state.regionIndex] || REGIONS[0];
+        evaluateAutonomousStance(state);
         state.sim.state = 'ADVANCING';
         state.sim.progress = 0;
-        state.sim.duration = 2.8;
+        // Consolidação de marco (~40s)
+        state.sim.duration = 40.0;
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Inscrição de marco e reconhecimento';
         state.sim.enemy = null;
         state.sim.forgingSlot = null;
         state.sim.detail = `Consolidando o domínio sobre ${region.name}...`;
+      }
+
+      function enterStudyingState(state, offlineCollector) {
+        evaluateAutonomousStance(state);
+        state.sim.state = 'STUDYING';
+        state.sim.progress = 0;
+        state.sim.duration = 26.0;
+        state.sim.subProgress = 0;
+        state.sim.subLabel = 'Meditação sobre runas e técnicas';
+        state.sim.enemy = null;
+        state.sim.forgingSlot = null;
+        state.sim.detail = 'Estudando inscrições antigas para aprofundar suas disciplinas...';
+        addLog(state, 'rest', 'Deteve-se para meditar sobre suas disciplinas e inscrições.', offlineCollector);
       }
 
       function stepSimulation(state, dtSeconds, offlineCollector) {
@@ -1925,43 +2009,46 @@
         const derived = computeDerivedStats(state);
         state.character.maxHp = derived.maxHp;
         if (state.character.hp > derived.maxHp) state.character.hp = derived.maxHp;
+        evaluateAutonomousStance(state);
 
         const sim = state.sim;
-        const stepIncrement = dtSeconds / Math.max(0.4, sim.duration);
+        const stepIncrement = dtSeconds / Math.max(1.0, sim.duration);
         sim.progress += stepIncrement;
+        sim.subProgress = (sim.progress * 3) % 1.0;
 
         if (sim.state === 'EXPLORING') {
-          grantSkillXp(state, 'passo_espectral', dtSeconds * 4.5, offlineCollector);
-          grantSkillXp(state, 'leitura_de_runas', dtSeconds * 3.5, offlineCollector);
+          grantSkillXp(state, 'passo_espectral', dtSeconds * 0.75, offlineCollector);
+          grantSkillXp(state, 'leitura_de_runas', dtSeconds * 0.65, offlineCollector);
 
           if (sim.progress >= 1.0) {
             sim.progress = 0;
             const region = REGIONS[state.regionIndex] || REGIONS[0];
-            state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 14);
+            // Progresso regional cadenciado (4 a 6 pontos por exploração completa)
+            state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 5);
             state.character.rankProgress = Math.min(100, Math.round((state.regionMastery / region.masteryGoal) * 100));
 
-            grantXp(state, 14 * region.threatPower, offlineCollector);
-            const marksFound = Math.max(2, Math.round(5 * region.threatPower));
-            const ashFound = Math.max(1, Math.round(2 * region.threatPower));
+            grantXp(state, 10 * region.threatPower, offlineCollector);
+            const marksFound = Math.max(1, Math.round(3 * region.threatPower));
+            const ashFound = Math.max(1, Math.round(1.4 * region.threatPower));
             state.resources.marks += marksFound;
             state.resources.ashes += ashFound;
 
-            // Chance de encontrar fragmento de relíquia
-            const relicChance = 0.14 + (getSkillRank(state, 'leitura_de_runas') - 1) * 0.02;
+            // Chance rara de encontrar fragmento de relíquia
+            const relicChance = 0.06 + (getSkillRank(state, 'leitura_de_runas') - 1) * 0.01;
             if (Math.random() < relicChance) {
               state.resources.relics += 1;
               addLog(
                 state,
                 'loot',
-                `Recolheu um Fragmento de Relíquia em ${region.name}.`,
+                `Recolheu um raro Fragmento de Relíquia em ${region.name}.`,
                 offlineCollector
               );
             }
 
-            // Verifica transição de estado após explorar
+            // Decisões 100% autônomas da IA
             const hpRatio = state.character.hp / Math.max(1, state.character.maxHp);
-            if (hpRatio < 0.42) {
-              enterRestingState(state, 'Vitalidade baixa; recolheu-se para recobrar forças.', offlineCollector);
+            if (hpRatio < 0.48) {
+              enterRestingState(state, 'Vitalidade desgastada; recolheu-se para recobrar forças.', offlineCollector);
               return;
             }
 
@@ -1971,18 +2058,21 @@
             }
 
             const upgradeKey = findUpgradeableSlot(state);
-            if (upgradeKey && Math.random() < 0.45) {
+            if (upgradeKey && Math.random() < 0.55) {
               enterForgingState(state, upgradeKey);
               return;
             }
 
-            if (Math.random() < 0.62) {
+            const roll = Math.random();
+            if (roll < 0.52) {
               enterCombatState(state, offlineCollector);
+            } else if (roll < 0.68) {
+              enterStudyingState(state, offlineCollector);
             } else {
               addLog(
                 state,
                 'loot',
-                `Vasculhou ${region.name}: obteve ${marksFound} Marcas e ${ashFound} Cinzas.`,
+                `Vasculhou ${region.name}: recolheu ${marksFound} Marcas e ${ashFound} Cinzas.`,
                 offlineCollector
               );
               enterExploringState(state);
@@ -1998,34 +2088,40 @@
           if (sim.progress >= 1.0) {
             sim.progress = 0;
 
+            const stanceAtkMult = sim.stance.startsWith('Ofensiva') ? 1.15 : (sim.stance.startsWith('Cautelosa') ? 0.88 : 1.0);
+            const stanceDefMult = sim.stance.startsWith('Cautelosa') ? 1.22 : (sim.stance.startsWith('Ofensiva') ? 0.90 : 1.0);
+
             // Golpe do peregrino
             const isCrit = Math.random() * 100 < derived.critChance;
-            const rawAtk = derived.physAtk + derived.arcanePower * 0.55;
-            const dmgDealt = Math.max(3, Math.round((rawAtk - enemy.def * 0.45) * (isCrit ? 1.65 : 1.0)));
+            const rawAtk = (derived.physAtk + derived.arcanePower * 0.55) * stanceAtkMult;
+            const dmgDealt = Math.max(2, Math.round((rawAtk - enemy.def * 0.45) * (isCrit ? 1.6 : 1.0)));
             enemy.hp -= dmgDealt;
 
-            grantSkillXp(state, 'golpe_dilacerante', 7, offlineCollector);
-            grantSkillXp(state, 'chama_contida', 6, offlineCollector);
+            grantSkillXp(state, 'golpe_dilacerante', 3.5, offlineCollector);
+            grantSkillXp(state, 'chama_contida', 3.0, offlineCollector);
 
             if (enemy.hp <= 0) {
               enemy.hp = 0;
               const xpGain = grantXp(state, enemy.xpReward, offlineCollector);
-              state.resources.marks += enemy.marksReward;
-              state.resources.ashes += enemy.ashReward;
+              const marksGain = Math.max(2, Math.round(enemy.marksReward * 0.65));
+              const ashGain = Math.max(1, Math.round(enemy.ashReward * 0.65));
+              state.resources.marks += marksGain;
+              state.resources.ashes += ashGain;
+
               const region = REGIONS[state.regionIndex] || REGIONS[0];
-              state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 22);
+              state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 8);
               state.character.rankProgress = Math.min(100, Math.round((state.regionMastery / region.masteryGoal) * 100));
 
               addLog(
                 state,
                 'combat',
-                `Abateu ${enemy.name} (${dmgDealt} de dano${isCrit ? ' crítico' : ''}). Recebeu ${xpGain} XP e ${enemy.marksReward} Marcas.`,
+                `Abateu ${enemy.name} (${dmgDealt} de dano${isCrit ? ' crítico' : ''}). Recebeu ${xpGain} XP e ${marksGain} Marcas.`,
                 offlineCollector
               );
 
               advanceRankAndRegionIfReady(state, offlineCollector);
 
-              if (state.character.hp / Math.max(1, state.character.maxHp) < 0.45) {
+              if (state.character.hp / Math.max(1, state.character.maxHp) < 0.50) {
                 enterRestingState(state, 'Após o combate, buscou abrigo para estancar ferimentos.', offlineCollector);
               } else {
                 enterExploringState(state);
@@ -2035,31 +2131,37 @@
 
             // Contra-ataque do adversário
             const hazardMitigation = 1 - (derived.hazardResist / 100) * 0.25;
-            const dmgTaken = Math.max(1, Math.round((enemy.atk - derived.defense * 0.55) * hazardMitigation));
+            const effectiveDef = derived.defense * stanceDefMult;
+            const dmgTaken = Math.max(1, Math.round((enemy.atk - effectiveDef * 0.55) * hazardMitigation));
             state.character.hp = Math.max(0, state.character.hp - dmgTaken);
-            grantSkillXp(state, 'muralha_de_cinzas', 6, offlineCollector);
+            grantSkillXp(state, 'muralha_de_cinzas', 3.2, offlineCollector);
 
             sim.detail = `Troca golpes contra ${enemy.name} (${enemy.hp}/${enemy.maxHp} PV) · Sofreu ${dmgTaken} de dano.`;
 
-            // Recuo tático quando PV cai abaixo de 25%
-            if (state.character.hp <= Math.max(8, Math.round(state.character.maxHp * 0.25))) {
+            // Recuo tático autônomo quando PV cai abaixo de 28%
+            if (state.character.hp <= Math.max(8, Math.round(state.character.maxHp * 0.28))) {
               addLog(
                 state,
                 'combat',
-                `Recuo tático diante de ${enemy.name} com ${state.character.hp} PV restantes.`,
+                `Recuo tático autônomo diante de ${enemy.name} com ${state.character.hp} PV restantes.`,
                 offlineCollector
               );
               enterRestingState(state, 'Recuou em segurança para recuperar a vitalidade.', offlineCollector);
             }
           }
         } else if (sim.state === 'RESTING') {
-          grantSkillXp(state, 'resiliencia_inabalavel', dtSeconds * 5, offlineCollector);
-          const healPerSec = (state.character.maxHp * 0.14) * derived.restEfficiency;
+          grantSkillXp(state, 'resiliencia_inabalavel', dtSeconds * 0.9, offlineCollector);
+          // Cura gradual ao longo dos ~28s de repouso
+          const healPerSec = (state.character.maxHp * 0.032) * derived.restEfficiency;
           state.character.hp = Math.min(state.character.maxHp, state.character.hp + healPerSec * dtSeconds);
 
-          if (sim.progress >= 1.0 || state.character.hp >= state.character.maxHp) {
+          if (sim.progress >= 1.0 && state.character.hp >= state.character.maxHp * 0.85) {
             state.character.hp = Math.min(state.character.maxHp, Math.round(state.character.hp));
             enterExploringState(state);
+          } else if (sim.progress >= 1.0) {
+            // Se ainda estiver muito ferido, continua descansando em novo ciclo
+            sim.progress = 0;
+            sim.detail = 'Ferimentos profundos exigem vigília prolongada junto às cinzas...';
           }
         } else if (sim.state === 'FORGING') {
           if (sim.progress >= 1.0) {
@@ -2069,6 +2171,15 @@
         } else if (sim.state === 'ADVANCING') {
           if (sim.progress >= 1.0) {
             advanceRankAndRegionIfReady(state, offlineCollector);
+            enterExploringState(state);
+          }
+        } else if (sim.state === 'STUDYING') {
+          const voc = VOCATIONS[state.character.vocationId] || VOCATIONS.penitent;
+          const favored = voc.favoredSkills || ['leitura_de_runas'];
+          for (const skId of favored) {
+            grantSkillXp(state, skId, dtSeconds * 0.85, offlineCollector);
+          }
+          if (sim.progress >= 1.0) {
             enterExploringState(state);
           }
         }
@@ -2231,18 +2342,21 @@
           COMBAT: 'Em Combate',
           RESTING: 'Descansando e Recuperando',
           FORGING: 'Aprimorando Equipamento',
-          ADVANCING: 'Avançando de Patamar'
+          ADVANCING: 'Avançando de Patamar',
+          STUDYING: 'Estudando Disciplinas'
         };
         const fillClasses = {
           EXPLORING: 'fill-action',
           COMBAT: 'fill-combat',
           RESTING: 'fill-hp',
           FORGING: 'fill-forging',
-          ADVANCING: 'fill-advancing'
+          ADVANCING: 'fill-advancing',
+          STUDYING: 'fill-xp'
         };
 
         const banner = document.getElementById('stateBanner');
-        banner.className = `state-banner state-${game.sim.state}`;
+        const visualStateClass = game.sim.state === 'STUDYING' ? 'ADVANCING' : game.sim.state;
+        banner.className = `state-banner state-${visualStateClass}`;
         document.getElementById('stateLabel').textContent = stateLabels[game.sim.state] || game.sim.state;
         document.getElementById('stateCode').textContent = game.sim.state;
         document.getElementById('stateDetail').textContent = game.sim.detail;
@@ -2253,14 +2367,11 @@
         pBar.className = `bar-fill ${fillClasses[game.sim.state] || 'fill-action'}`;
         pBar.style.width = `${actPct}%`;
 
-        // Adversário em combate
-        const enemyCard = document.getElementById('enemyCard');
-        if (game.sim.state === 'COMBAT' && game.sim.enemy) {
-          enemyCard.style.display = 'flex';
-          const en = game.sim.enemy;
-          const eHp = Math.max(0, en.hp);
-          const ePct = Math.min(100, Math.max(0, (eHp / Math.max(1, en.maxHp)) * 100));
-          document.getElementById('enemyName').textContent = en.name;
+        const subPct = Math.min(100, Math.max(0, Math.round((game.sim.subProgress || 0) * 100)));
+        document.getElementById('subStepLabel').textContent = `Sub-etapa: ${game.sim.subLabel || 'Em curso'}`;
+        document.getElementById('subStepPct').textContent = `${subPct}%`;
+        document.getElementById('subStepBar').style.width = `${subPct}%`;
+        document.getElementById('hudTacticalStance').textContent = game.sim.stance || 'Vigilante';
           document.getElementById('enemyMeta').textContent = `ATQ ${en.atk} · DEF ${en.def}`;
           document.getElementById('enemyHpText').textContent = `${eHp} / ${en.maxHp}`;
           document.getElementById('enemyHpBar').style.width = `${ePct}%`;
@@ -2280,35 +2391,24 @@
           const unlocked = idx <= game.unlockedRegionMax;
           const isCurrent = idx === game.regionIndex;
           const cls = isCurrent ? 'region-node current' : (unlocked ? 'region-node' : 'region-node locked');
+          const statusText = isCurrent ? 'Em Curso' : (unlocked ? 'Percorrida' : 'Inexplorada');
           return `
             <div class="${cls}">
               <div>
                 <strong>${escapeHtml(reg.name)}</strong>
                 <div style="font-size:0.68rem; color:var(--text-muted);">${reg.threatRoman}</div>
               </div>
-              ${unlocked && !isCurrent
-                ? `<button type="button" class="btn-sm" data-travel-region="${idx}">Marchar</button>`
-                : `<span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-secondary);">${isCurrent ? 'Atual' : 'Bloqueada'}</span>`
-              }
+              <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-secondary);">${statusText}</span>
             </div>
           `;
         }).join('');
 
-        // Botões de preferência
-        const btnAutoUp = document.getElementById('btnAutoUpgrade');
-        btnAutoUp.textContent = `Auto-Aprimorar: ${game.prefs.autoUpgrade ? 'Ligado' : 'Desligado'}`;
-        btnAutoUp.classList.toggle('active-toggle', game.prefs.autoUpgrade);
-
-        const btnAutoAdv = document.getElementById('btnAutoAdvance');
-        btnAutoAdv.textContent = `Auto-Avançar: ${game.prefs.autoAdvance ? 'Ligado' : 'Desligado'}`;
-        btnAutoAdv.classList.toggle('active-toggle', game.prefs.autoAdvance);
-
-        // Equipamentos
+        // Equipamentos (100% autônomos, sem botões manuais de forja)
         document.getElementById('gearListContainer').innerHTML = ['weapon', 'armor', 'relic'].map(slotKey => {
           const item = game.gear[slotKey];
           const rarityName = RARITIES[item.rarityIdx] || 'Comum';
           const cost = getUpgradeCost(item);
-          const canAfford = game.resources.marks >= cost.marksCost && game.resources.ashes >= cost.ashesCost;
+          const ready = game.resources.marks >= cost.marksCost && game.resources.ashes >= cost.ashesCost;
           return `
             <div class="gear-slot">
               <div class="gear-top">
@@ -2317,8 +2417,8 @@
               </div>
               <div class="gear-item-title">${escapeHtml(item.name)}</div>
               <div class="gear-meta">
-                <span>Custo: ${cost.marksCost}M / ${cost.ashesCost}C</span>
-                <button type="button" class="btn-sm" data-upgrade-slot="${slotKey}" ${canAfford ? '' : 'disabled'}>Forjar Agora</button>
+                <span>Próxima Forja: ${cost.marksCost}M / ${cost.ashesCost}C</span>
+                <span style="color: ${ready ? 'var(--accent-gold)' : 'var(--text-muted)'};">${ready ? 'Aguardando Forja' : 'Reunindo Materiais'}</span>
               </div>
             </div>
           `;
@@ -2438,67 +2538,9 @@
          EVENTOS DA INTERFACE E LOOP PRINCIPAL
          ======================================================================== */
       function bindEvents() {
-        // Pausar / Velocidade
-        document.getElementById('btnTogglePause').addEventListener('click', () => {
-          isPaused = !isPaused;
-          document.getElementById('btnTogglePause').textContent = isPaused ? 'Retomar' : 'Pausar';
-          document.getElementById('simStatusText').textContent = isPaused ? 'Simulação Pausada' : 'Simulação Ativa';
-          document.getElementById('simStatusDot').classList.toggle('paused', isPaused);
-        });
-
-        document.getElementById('btnSpeedToggle').addEventListener('click', () => {
-          simSpeed = simSpeed === 1 ? 2 : (simSpeed === 2 ? 4 : 1);
-          document.getElementById('btnSpeedToggle').textContent = `Velocidade: ${simSpeed}x`;
-        });
-
         document.getElementById('btnDismissNotice').addEventListener('click', hideNotice);
 
-        // Preferências de autonomia
-        document.getElementById('btnAutoUpgrade').addEventListener('click', () => {
-          if (!game) return;
-          game.prefs.autoUpgrade = !game.prefs.autoUpgrade;
-          saveToLocalStorage(game);
-          renderHud();
-        });
-
-        document.getElementById('btnAutoAdvance').addEventListener('click', () => {
-          if (!game) return;
-          game.prefs.autoAdvance = !game.prefs.autoAdvance;
-          saveToLocalStorage(game);
-          renderHud();
-        });
-
-        // Ações delegadas de regiões e forja manual
-        document.getElementById('regionListContainer').addEventListener('click', (e) => {
-          const btn = e.target.closest('[data-travel-region]');
-          if (!btn || !game) return;
-          const targetIdx = Number(btn.getAttribute('data-travel-region'));
-          if (targetIdx >= 0 && targetIdx <= game.unlockedRegionMax && targetIdx !== game.regionIndex) {
-            game.regionIndex = targetIdx;
-            game.regionMastery = 0;
-            const reg = REGIONS[targetIdx];
-            addLog(game, 'milestone', `Marchou por vontade própria para ${reg.name} (${reg.threatRoman}).`);
-            enterExploringState(game);
-            saveToLocalStorage(game);
-            renderHud();
-          }
-        });
-
-        document.getElementById('gearListContainer').addEventListener('click', (e) => {
-          const btn = e.target.closest('[data-upgrade-slot]');
-          if (!btn || !game) return;
-          const slotKey = btn.getAttribute('data-upgrade-slot');
-          const item = game.gear[slotKey];
-          if (!item) return;
-          const cost = getUpgradeCost(item);
-          if (game.resources.marks >= cost.marksCost && game.resources.ashes >= cost.ashesCost) {
-            completeGearUpgrade(game, slotKey);
-            saveToLocalStorage(game);
-            renderHud();
-          }
-        });
-
-        // Filtros do log
+        // Filtros do log (apenas leitura/visualização da crônica)
         document.getElementById('logFilterBar').addEventListener('click', (e) => {
           const btn = e.target.closest('[data-filter]');
           if (!btn) return;
@@ -2670,8 +2712,8 @@
         const rawDt = Math.min(0.5, Math.max(0, (now - lastFrameTime) / 1000));
         lastFrameTime = now;
 
-        if (game && !isPaused) {
-          const effectiveDt = rawDt * simSpeed;
+        if (game) {
+          const effectiveDt = rawDt * SIM_SPEED;
           stepSimulation(game, effectiveDt);
           saveAccumulator += rawDt;
           if (saveAccumulator >= 5.0) {
