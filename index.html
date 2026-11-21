@@ -1,0 +1,2714 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crônica das Cinzas — Simulação Autônoma de Fantasia Sombria</title>
+  <style>
+    /* ==========================================================================
+       VARIÁVEIS DE TEMA E ESTÉTICA MANUSCRITO / FANTASIA SOMBRIA
+       ========================================================================== */
+    :root {
+      --bg-void: #0d0f12;
+      --bg-panel: #14181f;
+      --bg-elevated: #1a1f29;
+      --bg-input: #101318;
+      --border-subtle: #28303d;
+      --border-strong: #3a4557;
+
+      --text-primary: #e6e1d6;
+      --text-secondary: #a8a29e;
+      --text-muted: #76716c;
+
+      --accent-crimson: #9e3b3b;
+      --accent-crimson-soft: rgba(158, 59, 59, 0.16);
+      --accent-gold: #c2944b;
+      --accent-gold-soft: rgba(194, 148, 75, 0.16);
+      --accent-sage: #4d7c63;
+      --accent-sage-soft: rgba(77, 124, 99, 0.16);
+      --accent-indigo: #5c6bc0;
+      --accent-indigo-soft: rgba(92, 107, 192, 0.16);
+
+      --rar-comum: #9ca3af;
+      --rar-incomum: #4d7c63;
+      --rar-raro: #5c85b8;
+      --rar-epico: #9b6bc2;
+      --rar-ancestral: #c2944b;
+
+      --font-serif: Georgia, "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --transition: 180ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      background-color: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ==========================================================================
+       ESTRUTURA PRINCIPAL E RESPONSIVIDADE PARA EMBED (GOOGLE SITES)
+       ========================================================================== */
+    .app-shell {
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .topbar {
+      background: linear-gradient(180deg, #171c25 0%, var(--bg-panel) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      font-family: var(--font-serif);
+    }
+
+    .topbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-sage);
+      box-shadow: 0 0 8px var(--accent-sage);
+    }
+
+    .status-dot.paused {
+      background: var(--accent-gold);
+      box-shadow: none;
+    }
+
+    /* Grid principal adaptativo (3 colunas em telas amplas, 2 colunas em médias, 1 em estreitas) */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(270px, 1fr) minmax(320px, 1.35fr) minmax(280px, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .col-chronicle {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+      .col-chronicle {
+        grid-column: auto;
+      }
+    }
+
+    .column-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ==========================================================================
+       PAINÉIS, CARTÕES E TIPOGRAFIA
+       ========================================================================== */
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .panel-title {
+      font-family: var(--font-serif);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .panel-tag {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+    }
+
+    .serif-quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    /* ==========================================================================
+       BOTÕES E CONTROLES DE PREFERÊNCIA
+       ========================================================================== */
+    button {
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), transform 80ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 32px;
+    }
+
+    button:hover:not(:disabled) {
+      background: #232a38;
+      border-color: var(--accent-gold);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.btn-primary {
+      background: linear-gradient(180deg, #3a2d1b 0%, #292013 100%);
+      border-color: var(--accent-gold);
+      color: #f3dfb8;
+    }
+
+    button.btn-primary:hover:not(:disabled) {
+      background: linear-gradient(180deg, #4b3921 0%, #342817 100%);
+    }
+
+    button.btn-danger {
+      background: var(--accent-crimson-soft);
+      border-color: var(--accent-crimson);
+      color: #f0b8b8;
+    }
+
+    button.btn-danger:hover:not(:disabled) {
+      background: rgba(158, 59, 59, 0.28);
+    }
+
+    button.btn-sm {
+      padding: 4px 8px;
+      min-height: 26px;
+      font-size: 0.72rem;
+    }
+
+    button.active-toggle {
+      background: var(--accent-sage-soft);
+      border-color: var(--accent-sage);
+      color: #c7e5d5;
+    }
+
+    /* ==========================================================================
+       BARRAS DE PROGRESSO E ESTADOS AUTÔNOMOS
+       ========================================================================== */
+    .state-banner {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--accent-sage);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .state-banner.state-EXPLORING { border-left-color: var(--accent-sage); }
+    .state-banner.state-COMBAT { border-left-color: var(--accent-crimson); background: linear-gradient(90deg, rgba(158,59,59,0.11) 0%, var(--bg-elevated) 65%); }
+    .state-banner.state-RESTING { border-left-color: var(--accent-indigo); }
+    .state-banner.state-FORGING { border-left-color: var(--accent-gold); }
+    .state-banner.state-ADVANCING { border-left-color: #b589d6; }
+
+    .state-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .state-label {
+      font-family: var(--font-serif);
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .state-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
+
+    .state-detail {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .progress-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bar-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .bar-meta strong {
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-track.thin {
+      height: 7px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 120ms linear;
+      border-radius: 999px;
+    }
+
+    .fill-action { background: linear-gradient(90deg, #3c6650 0%, var(--accent-sage) 100%); }
+    .fill-combat { background: linear-gradient(90deg, #742626 0%, var(--accent-crimson) 100%); }
+    .fill-forging { background: linear-gradient(90deg, #8b662b 0%, var(--accent-gold) 100%); }
+    .fill-advancing { background: linear-gradient(90deg, #474f8a 0%, var(--accent-indigo) 100%); }
+    .fill-hp { background: linear-gradient(90deg, #7a2929 0%, #b54242 100%); }
+    .fill-xp { background: linear-gradient(90deg, #3d4887 0%, var(--accent-indigo) 100%); }
+    .fill-rank { background: linear-gradient(90deg, #8c672a 0%, var(--accent-gold) 100%); }
+    .fill-threat { background: linear-gradient(90deg, #5c3a21 0%, #b36b38 100%); }
+
+    /* ==========================================================================
+       CARTÃO DE COMBATE / ADVERSÁRIO
+       ========================================================================== */
+    .enemy-card {
+      background: var(--bg-input);
+      border: 1px solid rgba(158, 59, 59, 0.45);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .enemy-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .enemy-name {
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #e89c9c;
+    }
+
+    .enemy-stats {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       ATRIBUTOS, DERIVADOS, EQUIPAMENTOS, HABILIDADES E REGIÕES
+       ========================================================================== */
+    .identity-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .char-name {
+      font-family: var(--font-serif);
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .char-sub {
+      font-size: 0.8rem;
+      color: var(--accent-gold);
+    }
+
+    .char-rank {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .stat-cell {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 4px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-abbr {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .derived-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .derived-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.76rem;
+    }
+
+    .derived-item span {
+      color: var(--text-secondary);
+    }
+
+    .derived-item strong {
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    .resources-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .res-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .res-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .res-val {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    /* Equipamentos */
+    .gear-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .gear-slot {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .gear-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gear-slot-name {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .gear-rarity {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .rar-Comum { color: var(--rar-comum); }
+    .rar-Incomum { color: var(--rar-incomum); }
+    .rar-Raro { color: var(--rar-raro); }
+    .rar-Épico { color: var(--rar-epico); }
+    .rar-Ancestral { color: var(--rar-ancestral); }
+
+    .gear-item-title {
+      font-family: var(--font-serif);
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .gear-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* Habilidades / Maestria */
+    .skills-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .skill-row {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .skill-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .skill-name {
+      font-family: var(--font-serif);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .skill-rank {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent-indigo);
+      font-weight: 700;
+    }
+
+    .skill-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    /* Regiões e Marcos */
+    .region-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .region-title {
+      font-family: var(--font-serif);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .region-desc {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      font-family: var(--font-serif);
+    }
+
+    .region-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .region-node {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      font-size: 0.75rem;
+    }
+
+    .region-node.current {
+      border-color: var(--accent-gold);
+      background: var(--accent-gold-soft);
+    }
+
+    .region-node.locked {
+      opacity: 0.5;
+    }
+
+    .toggles-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* ==========================================================================
+       CRÔNICA / LOG DE EVENTOS
+       ========================================================================== */
+    .log-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .log-stream {
+      max-height: 540px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    @media (max-width: 760px) {
+      .log-stream {
+        max-height: 360px;
+      }
+    }
+
+    .log-entry {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 7px 9px;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .log-entry.cat-combat { border-left-color: var(--accent-crimson); }
+    .log-entry.cat-loot { border-left-color: var(--accent-gold); }
+    .log-entry.cat-milestone { border-left-color: var(--accent-indigo); background: rgba(92, 107, 192, 0.07); }
+    .log-entry.cat-rest { border-left-color: var(--accent-sage); }
+    .log-entry.cat-system { border-left-color: var(--text-muted); }
+
+    .log-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .log-text {
+      color: var(--text-primary);
+      font-family: var(--font-serif);
+      line-height: 1.4;
+    }
+
+    /* ==========================================================================
+       MODAIS (CRIAÇÃO DE PERSONAGEM, RELATÓRIO OFFLINE, SAVE/EXPORTAR, GUIA)
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 8, 11, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 999;
+      overflow-y: auto;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-title {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 580px) {
+      .form-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-label {
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.84rem;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-gold);
+    }
+
+    textarea {
+      min-height: 120px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      resize: vertical;
+    }
+
+    .alloc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      gap: 8px;
+    }
+
+    .alloc-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+    }
+
+    .flavor-box {
+      background: var(--bg-input);
+      border-left: 3px solid var(--accent-gold);
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .modal-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .notice-banner {
+      background: var(--accent-gold-soft);
+      border: 1px solid var(--accent-gold);
+      color: #f3dfb8;
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .notice-banner.visible {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" id="appRoot">
+    <!-- CABEÇALHO SUPERIOR -->
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-title">
+          <span>Crônica das Cinzas</span>
+        </div>
+        <div class="brand-subtitle">Simulação autônoma de um peregrino sob o juramento das cinzas</div>
+      </div>
+
+      <div class="topbar-controls">
+        <div class="status-pill" id="simStatusPill">
+          <span class="status-dot" id="simStatusDot"></span>
+          <span id="simStatusText">Simulação Ativa</span>
+        </div>
+        <button type="button" class="btn-sm" id="btnTogglePause">Pausar</button>
+        <button type="button" class="btn-sm" id="btnSpeedToggle">Velocidade: 1x</button>
+        <button type="button" class="btn-sm" id="btnOpenSaveModal">Salvamento</button>
+        <button type="button" class="btn-sm" id="btnOpenGuideModal">Guia e Sites</button>
+        <button type="button" class="btn-sm btn-danger" id="btnOpenResetModal">Novo Juramento</button>
+      </div>
+    </header>
+
+    <!-- AVISO / MENSAGEM DO SISTEMA (SEM ALERT) -->
+    <div class="notice-banner" id="systemNotice">
+      <span id="systemNoticeText"></span>
+      <button type="button" class="btn-sm" id="btnDismissNotice">Fechar</button>
+    </div>
+
+    <!-- GRADE PRINCIPAL DE 3 COLUNAS -->
+    <main class="main-grid">
+      <!-- COLUNA 1: PEREGRINO, ATRIBUTOS E RECURSOS -->
+      <div class="column-stack">
+        <section class="panel" aria-label="Identidade e Atributos">
+          <div class="panel-header">
+            <h2 class="panel-title">Peregrino</h2>
+            <span class="panel-tag" id="hudLevelTag">Nível 1</span>
+          </div>
+
+          <div class="identity-box">
+            <div class="char-name" id="hudCharName">—</div>
+            <div class="char-sub" id="hudCharOriginVocation">—</div>
+            <div class="char-rank" id="hudCharRank">—</div>
+          </div>
+
+          <div class="progress-group">
+            <div class="bar-row">
+              <div class="bar-meta">
+                <span>Vitalidade (PV)</span>
+                <strong id="hudHpText">0 / 0</strong>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-hp" id="hudHpBar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bar-row">
+              <div class="bar-meta">
+                <span>Experiência</span>
+                <strong id="hudXpText">0 / 100</strong>
+              </div>
+              <div class="bar-track thin">
+                <div class="bar-fill fill-xp" id="hudXpBar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bar-row">
+              <div class="bar-meta">
+                <span>Progresso de Patamar</span>
+                <strong id="hudRankText">0%</strong>
+              </div>
+              <div class="bar-track thin">
+                <div class="bar-fill fill-rank" id="hudRankBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="resources-strip">
+            <div class="res-box">
+              <span class="res-label">Marcas</span>
+              <span class="res-val" id="hudMarks">0</span>
+            </div>
+            <div class="res-box">
+              <span class="res-label">Cinzas</span>
+              <span class="res-val" id="hudAshes" style="color: var(--text-primary);">0</span>
+            </div>
+            <div class="res-box">
+              <span class="res-label">Relíquias</span>
+              <span class="res-val" id="hudRelics" style="color: var(--accent-indigo);">0</span>
+            </div>
+          </div>
+
+          <div class="stats-grid" id="hudBaseStats"></div>
+
+          <div class="derived-grid" id="hudDerivedStats"></div>
+        </section>
+
+        <!-- REGIÕES E MARCOS -->
+        <section class="panel" aria-label="Regiões e Marcos">
+          <div class="panel-header">
+            <h2 class="panel-title">Território e Ameaça</h2>
+            <span class="panel-tag" id="hudThreatLevel">Ameaça I</span>
+          </div>
+
+          <div class="region-box">
+            <div class="region-title" id="hudRegionName">—</div>
+            <div class="region-desc" id="hudRegionDesc">—</div>
+            <div class="bar-row" style="margin-top: 4px;">
+              <div class="bar-meta">
+                <span>Domínio da Região (Marco)</span>
+                <strong id="hudRegionMasteryText">0 / 100</strong>
+              </div>
+              <div class="bar-track thin">
+                <div class="bar-fill fill-threat" id="hudRegionMasteryBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="toggles-row">
+            <button type="button" class="btn-sm active-toggle" id="btnAutoUpgrade">Auto-Aprimorar: Ligado</button>
+            <button type="button" class="btn-sm active-toggle" id="btnAutoAdvance">Auto-Avançar: Ligado</button>
+          </div>
+
+          <div class="region-selector" id="regionListContainer"></div>
+        </section>
+      </div>
+
+      <!-- COLUNA 2: SIMULAÇÃO ATUAL, EQUIPAMENTOS E HABILIDADES -->
+      <div class="column-stack">
+        <section class="panel" aria-label="Estado Atual da Simulação">
+          <div class="panel-header">
+            <h2 class="panel-title">Conduta Autônoma</h2>
+            <span class="panel-tag" id="hudCycleClock">00:00:00</span>
+          </div>
+
+          <div class="state-banner state-EXPLORING" id="stateBanner">
+            <div class="state-top-row">
+              <span class="state-label" id="stateLabel">Explorando a Região</span>
+              <span class="state-badge" id="stateCode">EXPLORANDO</span>
+            </div>
+            <div class="state-detail" id="stateDetail">Aguardando inicialização...</div>
+            <div class="bar-row" style="margin-top: 4px;">
+              <div class="bar-meta">
+                <span>Progresso da Ação Atual</span>
+                <strong id="stateProgressPct">0%</strong>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill fill-action" id="stateProgressBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Painel de Adversário quando em Combate -->
+          <div class="enemy-card" id="enemyCard" style="display: none;">
+            <div class="enemy-header">
+              <span class="enemy-name" id="enemyName">Adversário</span>
+              <span class="enemy-stats" id="enemyMeta">Ameaça</span>
+            </div>
+            <div class="bar-row">
+              <div class="bar-meta">
+                <span>Vitalidade do Adversário</span>
+                <strong id="enemyHpText">0 / 0</strong>
+              </div>
+              <div class="bar-track thin">
+                <div class="bar-fill fill-combat" id="enemyHpBar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- EQUIPAMENTOS -->
+        <section class="panel" aria-label="Equipamentos e Relíquias">
+          <div class="panel-header">
+            <h2 class="panel-title">Arsenal e Relíquias</h2>
+            <span class="panel-tag">3 Espaços</span>
+          </div>
+          <div class="gear-list" id="gearListContainer"></div>
+        </section>
+
+        <!-- HABILIDADES E MAESTRIA -->
+        <section class="panel" aria-label="Habilidades e Maestria">
+          <div class="panel-header">
+            <h2 class="panel-title">Disciplinas e Maestria</h2>
+            <span class="panel-tag">6 Técnicas</span>
+          </div>
+          <div class="skills-list" id="skillsListContainer"></div>
+        </section>
+      </div>
+
+      <!-- COLUNA 3: CRÔNICA / LOG DE EVENTOS -->
+      <div class="column-stack col-chronicle">
+        <section class="panel" aria-label="Crônica de Eventos">
+          <div class="panel-header">
+            <h2 class="panel-title">Crônica dos Eventos</h2>
+            <span class="panel-tag" id="hudLogCount">0 registros</span>
+          </div>
+
+          <div class="log-filters" id="logFilterBar">
+            <button type="button" class="btn-sm active-toggle" data-filter="all">Tudo</button>
+            <button type="button" class="btn-sm" data-filter="combat">Combate</button>
+            <button type="button" class="btn-sm" data-filter="loot">Espólios</button>
+            <button type="button" class="btn-sm" data-filter="milestone">Marcos</button>
+            <button type="button" class="btn-sm" data-filter="rest">Repouso</button>
+          </div>
+
+          <div class="log-stream" id="logStream"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 1: CRIAÇÃO DE PERSONAGEM
+       ======================================================================== -->
+  <div class="modal-backdrop" id="creationModal" role="dialog" aria-modal="true" aria-labelledby="creationModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="creationModalTitle">Tomar o Juramento das Cinzas</h2>
+      <p class="serif-quote">
+        Nenhum nome é esquecido pelas cinzas, mas poucos suportam o peso do caminho. Defina quem marcha antes que a vigília comece.
+      </p>
+
+      <div class="field-group">
+        <label class="field-label" for="inputCharName">Nome do Peregrino</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="inputCharName" maxlength="32" placeholder="Ex.: Aldric de Vael" />
+          <button type="button" id="btnRandomName" title="Gerar nome">Sortear Nome</button>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field-group">
+          <label class="field-label" for="selectOrigin">Origem</label>
+          <select id="selectOrigin"></select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="selectVocation">Vocação</label>
+          <select id="selectVocation"></select>
+        </div>
+      </div>
+
+      <div class="flavor-box" id="creationFlavorText"></div>
+
+      <div class="field-group">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="field-label">Pontos de Atributo Disponíveis</span>
+          <strong style="font-family: var(--font-mono); color: var(--accent-gold);" id="allocRemaining">0</strong>
+        </div>
+        <div id="allocRowsContainer" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnForgeRandom">Forjar Aleatório</button>
+        <button type="button" class="btn-primary" id="btnConfirmCreation">Iniciar Jornada</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: RELATÓRIO DE AUSÊNCIA (PROGRESSO OFFLINE)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="offlineModal" role="dialog" aria-modal="true" aria-labelledby="offlineModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="offlineModalTitle">Relatório de Ausência</h2>
+      <p class="serif-quote" id="offlineSummarySubtitle"></p>
+      <div id="offlineSummaryStats" class="derived-grid"></div>
+      <div class="log-stream" id="offlineHighlightsList" style="max-height: 240px;"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" id="btnCloseOfflineModal">Prosseguir Vigília</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: SALVAMENTO, EXPORTAR E IMPORTAR
+       ======================================================================== -->
+  <div class="modal-backdrop" id="saveModal" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="saveModalTitle">Arquivos da Crônica (JSON)</h2>
+      <p class="serif-quote">
+        O progresso é salvo automaticamente no navegador. Exporte o pergaminho em texto para guardar cópia ou transferi-lo.
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <button type="button" id="btnExportSave">Gerar Código de Exportação</button>
+        <button type="button" id="btnCopySave">Copiar para Área de Transferência</button>
+        <button type="button" class="btn-primary" id="btnImportSave">Importar Código Colado</button>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="saveJsonArea">Conteúdo JSON do Salvamento</label>
+        <textarea id="saveJsonArea" placeholder="Cole aqui um código JSON exportado para restaurar uma crônica..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnCloseSaveModal">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4: CONFIRMAÇÃO DE NOVO JURAMENTO (RESET)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="resetModalTitle">Encerrar a Crônica Atual</h2>
+      <p class="serif-quote">
+        Ao romper este juramento, o peregrino atual e seu histórico local serão apagados permanentemente. Deseja forjar uma nova jornada?
+      </p>
+      <div class="modal-footer">
+        <button type="button" id="btnCancelReset">Manter Jornada Atual</button>
+        <button type="button" class="btn-danger" id="btnConfirmReset">Apagar e Criar Novo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 5: GUIA DO JOGO E INSTRUÇÕES PARA GOOGLE SITES
+       ======================================================================== -->
+  <div class="modal-backdrop" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="guideModalTitle">Crônica das Cinzas — Guia e Google Sites</h2>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+        <p><strong style="color: var(--text-primary);">Simulação Autônoma:</strong> O personagem explora territórios, enfrenta ameaças, recua quando a vitalidade cai de forma crítica, repousa, aprimora armas/armaduras/relíquias, eleva disciplinas e avança de patamar sem exigir cliques contínuos.</p>
+        <p><strong style="color: var(--text-primary);">Progresso Offline:</strong> Ao fechar ou recarregar a página, o tempo decorrido é calculado com base no carimbo real de horário (até 24 horas por retorno), simulando encontros, recuperações, recursos e conquistas.</p>
+        <p><strong style="color: var(--text-primary);">Como incorporar no Google Sites:</strong></p>
+        <ol style="padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
+          <li>No editor do Google Sites, vá em <strong>Inserir &gt; Incorporar</strong> e selecione a aba <strong>Incorporar código</strong>.</li>
+          <li>Cole todo o conteúdo deste arquivo HTML único e clique em <strong>Próximo</strong> e depois em <strong>Inserir</strong>.</li>
+          <li>Redimensione o bloco de incorporação na página para altura generosa (ex.: 760px a 980px) para evitar rolagem interna excessiva.</li>
+        </ol>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" id="btnCloseGuideModal">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================================
+       DADOS ESTÁTICOS DO MUNDO, ORIGENS, VOCAÇÕES, REGIÕES, EQUIPAMENTOS E HABILIDADES
+       ======================================================================== */
+    (function () {
+      'use strict';
+
+      const STORAGE_KEY = 'cronica_das_cinzas_save_v1';
+      const MAX_OFFLINE_SECONDS = 24 * 3600; // 24 horas de cálculo offline
+
+      const ORIGINS = {
+        winterborn: {
+          id: 'winterborn',
+          name: 'Filhos do Inverno',
+          flavor: 'Criados sob geadas tardias e ventos cortantes, carregam ossos rijos e paciência diante da escassez.',
+          mods: { FOR: 1, DES: 0, VIT: 2, INT: 0, VON: 1 }
+        },
+        oakhaven: {
+          id: 'oakhaven',
+          name: 'Descendentes de Oakhaven',
+          flavor: 'Herdeiros de vales outrora férteis e agora cobertos de névoa, versados na leitura das trilhas e das ervas.',
+          mods: { FOR: 0, DES: 2, VIT: 1, INT: 0, VON: 1 }
+        },
+        ashplain: {
+          id: 'ashplain',
+          name: 'Exilados das Planícies de Cinza',
+          flavor: 'Sobreviventes de campos calcinados onde a fuligem nunca assenta; sua mente é afiada pela vigilância constante.',
+          mods: { FOR: 0, DES: 1, VIT: 0, INT: 2, VON: 1 }
+        },
+        ironblood: {
+          id: 'ironblood',
+          name: 'Sangue de Ferro',
+          flavor: 'Linhagem ligada às antigas forjas e promessas de aço; impõem respeito e suportam impactos severos.',
+          mods: { FOR: 2, DES: 0, VIT: 1, INT: 0, VON: 1 }
+        }
+      };
+
+      const VOCATIONS = {
+        penitent: {
+          id: 'penitent',
+          name: 'Cavaleiro Penitente',
+          flavor: 'Avança sem hesitação sob armadura marcada por juramentos antigos, convertendo dor em golpe firme.',
+          mods: { FOR: 2, DES: 0, VIT: 2, INT: 0, VON: 1 },
+          favoredSkills: ['golpe_dilacerante', 'resiliencia_inabalavel']
+        },
+        stalker: {
+          id: 'stalker',
+          name: 'Caçador de Sombras',
+          flavor: 'Move-se entre ruínas e névoa com precisão letal, explorando brechas antes que o perigo se complete.',
+          mods: { FOR: 1, DES: 3, VIT: 0, INT: 1, VON: 0 },
+          favoredSkills: ['passo_espectral', 'golpe_dilacerante']
+        },
+        arcanist: {
+          id: 'arcanist',
+          name: 'Arcanista das Ruínas',
+          flavor: 'Decifra inscrições esquecidas e canaliza brasas contidas para romper defesas sobrenaturais.',
+          mods: { FOR: 0, DES: 1, VIT: 0, INT: 3, VON: 1 },
+          favoredSkills: ['chama_contida', 'leitura_de_runas']
+        },
+        sentinel: {
+          id: 'sentinel',
+          name: 'Sentinela da Muralha',
+          flavor: 'Guardião de passagens esquecidas; sua vontade sustenta a vigília mesmo quando as forças minguam.',
+          mods: { FOR: 1, DES: 1, VIT: 1, INT: 0, VON: 2 },
+          favoredSkills: ['muralha_de_cinzas', 'resiliencia_inabalavel']
+        }
+      };
+
+      const ATTR_META = [
+        { key: 'FOR', label: 'Força', desc: 'Aumenta dano físico e carga de golpe.' },
+        { key: 'DES', label: 'Destreza', desc: 'Aumenta velocidade de ação e chance crítica.' },
+        { key: 'VIT', label: 'Vitalidade', desc: 'Aumenta PV máximo e mitigação de dano.' },
+        { key: 'INT', label: 'Intelecto', desc: 'Aumenta poder arcano e ganho de maestria.' },
+        { key: 'VON', label: 'Vontade', desc: 'Melhora eficiência de descanso e resistência a perigos.' }
+      ];
+
+      const RARITIES = ['Comum', 'Incomum', 'Raro', 'Épico', 'Ancestral'];
+
+      const GEAR_TEMPLATES = {
+        weapon: [
+          'Lâmina de Ferro Gasto',
+          'Espada Longa da Vigília',
+          'Cimitarra das Brasas',
+          'Glaive do Juramento Partido',
+          'Cetro de Cinza Coroada'
+        ],
+        armor: [
+          'Cota de Couro Curtido',
+          'Malha Escamada do Vale',
+          'Peitoral das Cinzas Frias',
+          'Armadura do Guardião Caído',
+          'Manto de Aço e Névoa'
+        ],
+        relic: [
+          'Fragmento de Âmbar Opaco',
+          'Ampulheta de Areia Negra',
+          'Selo Rachado de Vael',
+          'Lanterna do Último Vigia',
+          'Coroa Desfeita das Cinzas'
+        ]
+      };
+
+      const INITIAL_SKILLS = [
+        {
+          id: 'golpe_dilacerante',
+          name: 'Golpe Dilacerante',
+          desc: 'Eleva o dano físico desferido em combate.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        },
+        {
+          id: 'passo_espectral',
+          name: 'Passo Espectral',
+          desc: 'Acelera a cadência de exploração e esquiva.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        },
+        {
+          id: 'chama_contida',
+          name: 'Chama Contida',
+          desc: 'Amplifica o poder arcano contra ameaças sombrias.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        },
+        {
+          id: 'muralha_de_cinzas',
+          name: 'Muralha de Cinzas',
+          desc: 'Reforça a defesa e reduz o impacto de golpes recebidos.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        },
+        {
+          id: 'leitura_de_runas',
+          name: 'Leitura de Runas',
+          desc: 'Aumenta o ganho de experiência e o achado de relíquias.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        },
+        {
+          id: 'resiliencia_inabalavel',
+          name: 'Resiliência Inabalável',
+          desc: 'Acelera a recuperação de vitalidade durante o repouso.',
+          rank: 1,
+          xp: 0,
+          xpNext: 100
+        }
+      ];
+
+      const REGIONS = [
+        {
+          id: 'colinas_cinza',
+          name: 'Colinas de Cinza Molhada',
+          threatRoman: 'Ameaça I',
+          threatPower: 1.0,
+          masteryGoal: 100,
+          desc: 'Encostas encharcadas onde a chuva arrasta fuligem de antigas fogueiras e ossadas sem lápide.',
+          enemies: [
+            { name: 'Carniçal da Encosta', hpBase: 48, atkBase: 7, defBase: 2, xpBase: 24, marksBase: 9, ashBase: 3 },
+            { name: 'Batedor Encharcado', hpBase: 56, atkBase: 8, defBase: 3, xpBase: 28, marksBase: 11, ashBase: 4 },
+            { name: 'Espectro de Bruma', hpBase: 44, atkBase: 9, defBase: 1, xpBase: 26, marksBase: 10, ashBase: 5 }
+          ]
+        },
+        {
+          id: 'floresta_ossos',
+          name: 'Floresta dos Ossos Silenciosos',
+          threatRoman: 'Ameaça II',
+          threatPower: 1.55,
+          masteryGoal: 140,
+          desc: 'Troncos retorcidos e copas cerradas que abafam o som dos passos; cada árvore guarda um vulto.',
+          enemies: [
+            { name: 'Lobo de Espinhos Cinzentos', hpBase: 82, atkBase: 13, defBase: 4, xpBase: 42, marksBase: 16, ashBase: 6 },
+            { name: 'Sentinela Corrompida', hpBase: 96, atkBase: 14, defBase: 6, xpBase: 48, marksBase: 19, ashBase: 7 },
+            { name: 'Aparição do Bosque', hpBase: 78, atkBase: 15, defBase: 3, xpBase: 45, marksBase: 18, ashBase: 8 }
+          ]
+        },
+        {
+          id: 'ruinas_vael',
+          name: 'Ruínas Submersas de Vael',
+          threatRoman: 'Ameaça III',
+          threatPower: 2.25,
+          masteryGoal: 190,
+          desc: 'Abóbadas afogadas por águas escuras onde colunas partidas sustentam tetos prestes a ruir.',
+          enemies: [
+            { name: 'Autômato de Lodo Antigo', hpBase: 135, atkBase: 20, defBase: 10, xpBase: 72, marksBase: 28, ashBase: 11 },
+            { name: 'Sacerdote Afogado', hpBase: 120, atkBase: 23, defBase: 7, xpBase: 76, marksBase: 30, ashBase: 12 },
+            { name: 'Guardião da Galeria', hpBase: 150, atkBase: 21, defBase: 12, xpBase: 80, marksBase: 32, ashBase: 13 }
+          ]
+        },
+        {
+          id: 'cimeiras_nevoa',
+          name: 'Cimeiras da Névoa Fria',
+          threatRoman: 'Ameaça IV',
+          threatPower: 3.1,
+          masteryGoal: 250,
+          desc: 'Desfiladeiros cortados por ventos glaciais e névoa espessa que oculta abismos sem fundo.',
+          enemies: [
+            { name: 'Colosso de Granito e Gelo', hpBase: 210, atkBase: 29, defBase: 16, xpBase: 115, marksBase: 45, ashBase: 18 },
+            { name: 'Cavaleiro do Vento Morto', hpBase: 195, atkBase: 32, defBase: 13, xpBase: 120, marksBase: 48, ashBase: 20 },
+            { name: 'Arauto da Geada Negra', hpBase: 185, atkBase: 34, defBase: 11, xpBase: 125, marksBase: 50, ashBase: 22 }
+          ]
+        },
+        {
+          id: 'abismo_juramento',
+          name: 'Abismo do Juramento Quebrado',
+          threatRoman: 'Ameaça V',
+          threatPower: 4.2,
+          masteryGoal: 320,
+          desc: 'O limiar onde antigas promessas se desfez em brasa viva e sombras de soberanos caídos.',
+          enemies: [
+            { name: 'Vulto do Juramento', hpBase: 290, atkBase: 42, defBase: 20, xpBase: 175, marksBase: 70, ashBase: 28 },
+            { name: 'Tirano das Cinzas', hpBase: 320, atkBase: 45, defBase: 24, xpBase: 190, marksBase: 78, ashBase: 32 },
+            { name: 'Soberano Esquecido', hpBase: 350, atkBase: 48, defBase: 26, xpBase: 210, marksBase: 88, ashBase: 36 }
+          ]
+        }
+      ];
+
+      const RANKS = [
+        { minLevel: 1, title: 'Iniciado das Cinzas' },
+        { minLevel: 3, title: 'Andarilho do Limiar' },
+        { minLevel: 6, title: 'Guardião da Vigília' },
+        { minLevel: 10, title: 'Veterano das Ruínas' },
+        { minLevel: 15, title: 'Arauto das Cinzas' },
+        { minLevel: 21, title: 'Soberano do Limiar' }
+      ];
+
+      const NAME_POOL = [
+        'Aldric de Vael', 'Mirela Cinzabrava', 'Toren do Vale', 'Isolde de Ferro',
+        'Kaelen da Névoa', 'Soren Pedra-Fria', 'Vespera de Oakhaven', 'Darian do Juramento',
+        'Caelum da Vigília', 'Helia das Ruínas', 'Bram de Cinza', 'Orin do Abismo'
+      ];
+
+      /* ========================================================================
+         ESTADO DO JOGO E INICIALIZAÇÃO
+         ======================================================================== */
+      let game = null;
+      let simSpeed = 1;
+      let isPaused = false;
+      let activeLogFilter = 'all';
+      let lastFrameTime = performance.now();
+      let saveAccumulator = 0;
+
+      // Estado temporário da criação de personagem
+      let draftCreation = {
+        name: '',
+        originId: 'winterborn',
+        vocationId: 'penitent',
+        alloc: { FOR: 0, DES: 0, VIT: 0, INT: 0, VON: 0 },
+        poolTotal: 6
+      };
+
+      function createInitialGear() {
+        return {
+          weapon: { slot: 'weapon', slotLabel: 'Arma', name: GEAR_TEMPLATES.weapon[0], rarityIdx: 0, level: 1 },
+          armor: { slot: 'armor', slotLabel: 'Armadura', name: GEAR_TEMPLATES.armor[0], rarityIdx: 0, level: 1 },
+          relic: { slot: 'relic', slotLabel: 'Relíquia', name: GEAR_TEMPLATES.relic[0], rarityIdx: 0, level: 1 }
+        };
+      }
+
+      function createNewGameState(params) {
+        const origin = ORIGINS[params.originId] || ORIGINS.winterborn;
+        const vocation = VOCATIONS[params.vocationId] || VOCATIONS.penitent;
+        const baseAttrs = { FOR: 5, DES: 5, VIT: 5, INT: 5, VON: 5 };
+
+        for (const k of Object.keys(baseAttrs)) {
+          baseAttrs[k] += (origin.mods[k] || 0) + (vocation.mods[k] || 0) + (params.alloc[k] || 0);
+        }
+
+        const now = Date.now();
+        const state = {
+          version: 1,
+          createdAt: now,
+          lastSavedAt: now,
+          elapsedWorldSec: 0,
+          character: {
+            name: (params.name || '').trim() || 'Peregrino Sem Nome',
+            originId: origin.id,
+            vocationId: vocation.id,
+            level: 1,
+            xp: 0,
+            xpNext: 100,
+            rankProgress: 0, // 0 a 100 para avançar de patamar/marco
+            baseAttrs,
+            hp: 100,
+            maxHp: 100
+          },
+          resources: {
+            marks: 25,
+            ashes: 5,
+            relics: 0
+          },
+          gear: createInitialGear(),
+          skills: INITIAL_SKILLS.map(s => ({ ...s })),
+          regionIndex: 0,
+          unlockedRegionMax: 0,
+          regionMastery: 0,
+          prefs: {
+            autoUpgrade: true,
+            autoAdvance: true
+          },
+          sim: {
+            state: 'EXPLORING', // EXPLORING | COMBAT | RESTING | FORGING | ADVANCING
+            progress: 0,      // 0.0 a 1.0
+            duration: 5.0,    // segundos simulados necessários para concluir ação atual
+            detail: 'Sondando trilhas encobertas por fuligem...',
+            enemy: null,
+            forgingSlot: null
+          },
+          logs: []
+        };
+
+        const derived = computeDerivedStats(state);
+        state.character.maxHp = derived.maxHp;
+        state.character.hp = derived.maxHp;
+
+        addLog(
+          state,
+          'milestone',
+          `${state.character.name} (${origin.name} · ${vocation.name}) tomou o juramento em ${REGIONS[0].name}.`
+        );
+
+        return state;
+      }
+
+      /* ========================================================================
+         CÁLCULOS DE ATRIBUTOS, EQUIPAMENTOS E ESTATÍSTICAS DERIVADAS
+         ======================================================================== */
+      function getGearBonus(state) {
+        let physBonus = 0;
+        let arcaneBonus = 0;
+        let defBonus = 0;
+        let hpBonus = 0;
+
+        for (const slotKey of ['weapon', 'armor', 'relic']) {
+          const item = state.gear[slotKey];
+          const mult = 1 + item.rarityIdx * 0.45 + (item.level - 1) * 0.22;
+          if (slotKey === 'weapon') {
+            physBonus += Math.round(5 * mult);
+            arcaneBonus += Math.round(3 * mult);
+          } else if (slotKey === 'armor') {
+            defBonus += Math.round(4 * mult);
+            hpBonus += Math.round(14 * mult);
+          } else if (slotKey === 'relic') {
+            arcaneBonus += Math.round(5 * mult);
+            physBonus += Math.round(2 * mult);
+            hpBonus += Math.round(8 * mult);
+          }
+        }
+
+        return { physBonus, arcaneBonus, defBonus, hpBonus };
+      }
+
+      function getSkillRank(state, skillId) {
+        const sk = state.skills.find(s => s.id === skillId);
+        return sk ? sk.rank : 1;
+      }
+
+      function computeDerivedStats(state) {
+        const a = state.character.baseAttrs;
+        const g = getGearBonus(state);
+
+        const rGolpe = getSkillRank(state, 'golpe_dilacerante');
+        const rPasso = getSkillRank(state, 'passo_espectral');
+        const rChama = getSkillRank(state, 'chama_contida');
+        const rMuralha = getSkillRank(state, 'muralha_de_cinzas');
+        const rRunas = getSkillRank(state, 'leitura_de_runas');
+        const rResil = getSkillRank(state, 'resiliencia_inabalavel');
+
+        const maxHp = Math.round(85 + a.VIT * 14 + state.character.level * 12 + g.hpBonus);
+        const physAtk = Math.round(6 + a.FOR * 2.4 + a.DES * 0.6 + g.physBonus + (rGolpe - 1) * 3.5);
+        const arcanePower = Math.round(4 + a.INT * 2.6 + a.VON * 0.7 + g.arcaneBonus + (rChama - 1) * 3.5);
+        const defense = Math.round(2 + a.VIT * 1.4 + a.FOR * 0.5 + g.defBonus + (rMuralha - 1) * 2.5);
+        const critChance = Math.min(65, Number((5 + a.DES * 1.1 + a.INT * 0.35 + (rPasso - 1) * 1.2).toFixed(1)));
+        const actionSpeed = Number((1 + a.DES * 0.03 + (rPasso - 1) * 0.05).toFixed(2));
+        const hazardResist = Math.min(75, Math.round(8 + a.VON * 2.1 + a.VIT * 0.8 + (rRunas - 1) * 2));
+        const restEfficiency = Number((1 + a.VON * 0.08 + a.VIT * 0.04 + (rResil - 1) * 0.12).toFixed(2));
+
+        return {
+          maxHp,
+          physAtk,
+          arcanePower,
+          defense,
+          critChance,
+          actionSpeed,
+          hazardResist,
+          restEfficiency
+        };
+      }
+
+      function getUpgradeCost(item) {
+        const marksCost = Math.round((28 + item.level * 18) * (1 + item.rarityIdx * 0.65));
+        const ashesCost = Math.round((4 + item.level * 3) * (1 + item.rarityIdx * 0.5));
+        return { marksCost, ashesCost };
+      }
+
+      /* ========================================================================
+         LOG / CRÔNICA DE EVENTOS
+         ======================================================================== */
+      function formatClock(totalSec) {
+        const s = Math.max(0, Math.floor(totalSec));
+        const hrs = String(Math.floor(s / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+        const secs = String(s % 60).padStart(2, '0');
+        return `${hrs}:${mins}:${secs}`;
+      }
+
+      function addLog(state, category, text, offlineHighlightsCollector) {
+        const entry = {
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          ts: formatClock(state.elapsedWorldSec),
+          category,
+          text
+        };
+        state.logs.unshift(entry);
+        if (state.logs.length > 220) {
+          state.logs.length = 220;
+        }
+        if (Array.isArray(offlineHighlightsCollector) && (category === 'milestone' || category === 'loot')) {
+          if (offlineHighlightsCollector.length < 25) {
+            offlineHighlightsCollector.push(entry);
+          }
+        }
+      }
+
+      function showNotice(msg) {
+        const banner = document.getElementById('systemNotice');
+        const txt = document.getElementById('systemNoticeText');
+        txt.textContent = msg;
+        banner.classList.add('visible');
+      }
+
+      function hideNotice() {
+        document.getElementById('systemNotice').classList.remove('visible');
+      }
+
+      /* ========================================================================
+         MECÂNICAS DE PROGRESSÃO: XP, NÍVEL, HABILIDADES, EQUIPAMENTOS E REGIÕES
+         ======================================================================== */
+      function grantXp(state, rawXp, offlineCollector) {
+        const rRunas = getSkillRank(state, 'leitura_de_runas');
+        const mult = 1 + (rRunas - 1) * 0.06;
+        let gained = Math.max(1, Math.round(rawXp * mult));
+        state.character.xp += gained;
+
+        while (state.character.xp >= state.character.xpNext) {
+          state.character.xp -= state.character.xpNext;
+          state.character.level += 1;
+          state.character.xpNext = Math.round(100 * Math.pow(1.24, state.character.level - 1));
+
+          // Aumento automático equilibrado de atributos base conforme vocação
+          const voc = VOCATIONS[state.character.vocationId] || VOCATIONS.penitent;
+          const attrOrder = ['FOR', 'DES', 'VIT', 'INT', 'VON'];
+          for (const k of attrOrder) {
+            const vBonus = voc.mods[k] >= 2 ? 1 : 0;
+            if (vBonus > 0) state.character.baseAttrs[k] += 1;
+          }
+          const primaryKey = attrOrder[(state.character.level - 1) % attrOrder.length];
+          state.character.baseAttrs[primaryKey] += 1;
+
+          const derived = computeDerivedStats(state);
+          state.character.maxHp = derived.maxHp;
+          state.character.hp = Math.min(derived.maxHp, state.character.hp + Math.round(derived.maxHp * 0.35));
+
+          addLog(
+            state,
+            'milestone',
+            `${state.character.name} alcançou o Nível ${state.character.level}.`,
+            offlineCollector
+          );
+        }
+
+        return gained;
+      }
+
+      function grantSkillXp(state, skillId, amount, offlineCollector) {
+        const skill = state.skills.find(s => s.id === skillId);
+        if (!skill) return;
+        const intBonus = 1 + (state.character.baseAttrs.INT - 5) * 0.025;
+        skill.xp += Math.max(1, Math.round(amount * intBonus));
+
+        while (skill.xp >= skill.xpNext) {
+          skill.xp -= skill.xpNext;
+          skill.rank += 1;
+          skill.xpNext = Math.round(100 * Math.pow(1.32, skill.rank - 1));
+          addLog(
+            state,
+            'milestone',
+            `Disciplina "${skill.name}" elevou-se ao Grau ${skill.rank}.`,
+            offlineCollector
+          );
+        }
+      }
+
+      function spawnEnemyForRegion(state) {
+        const region = REGIONS[state.regionIndex] || REGIONS[0];
+        const tpl = region.enemies[Math.floor(Math.random() * region.enemies.length)];
+        const scale = region.threatPower * (1 + (state.character.level - 1) * 0.06);
+        const maxHp = Math.max(20, Math.round(tpl.hpBase * scale));
+        return {
+          name: tpl.name,
+          hp: maxHp,
+          maxHp,
+          atk: Math.max(4, Math.round(tpl.atkBase * scale)),
+          def: Math.max(0, Math.round(tpl.defBase * scale)),
+          xpReward: Math.round(tpl.xpBase * scale),
+          marksReward: Math.max(4, Math.round(tpl.marksBase * scale)),
+          ashReward: Math.max(1, Math.round(tpl.ashBase * scale))
+        };
+      }
+
+      function findUpgradeableSlot(state) {
+        if (!state.prefs.autoUpgrade) return null;
+        const order = ['weapon', 'armor', 'relic'];
+        for (const key of order) {
+          const item = state.gear[key];
+          const cost = getUpgradeCost(item);
+          if (state.resources.marks >= cost.marksCost && state.resources.ashes >= cost.ashesCost) {
+            return key;
+          }
+        }
+        return null;
+      }
+
+      function completeGearUpgrade(state, slotKey, offlineCollector) {
+        const item = state.gear[slotKey];
+        if (!item) return;
+        const cost = getUpgradeCost(item);
+        if (state.resources.marks < cost.marksCost || state.resources.ashes < cost.ashesCost) return;
+
+        state.resources.marks -= cost.marksCost;
+        state.resources.ashes -= cost.ashesCost;
+        item.level += 1;
+
+        // A cada 3 níveis de aprimoramento, sobe de raridade até o máximo (Ancestral)
+        if (item.level % 3 === 0 && item.rarityIdx < RARITIES.length - 1) {
+          item.rarityIdx += 1;
+          const namesArr = GEAR_TEMPLATES[slotKey];
+          item.name = namesArr[Math.min(namesArr.length - 1, item.rarityIdx)];
+          addLog(
+            state,
+            'loot',
+            `${item.slotLabel} refinada para raridade ${RARITIES[item.rarityIdx]}: ${item.name} (+${item.level}).`,
+            offlineCollector
+          );
+        } else {
+          addLog(
+            state,
+            'loot',
+            `Aprimorou ${item.name} (${item.slotLabel}) para o Grau +${item.level}.`,
+            offlineCollector
+          );
+        }
+
+        const derived = computeDerivedStats(state);
+        state.character.maxHp = derived.maxHp;
+        state.character.hp = Math.min(derived.maxHp, state.character.hp);
+      }
+
+      function advanceRankAndRegionIfReady(state, offlineCollector) {
+        const region = REGIONS[state.regionIndex] || REGIONS[0];
+        if (state.regionMastery >= region.masteryGoal) {
+          state.regionMastery = Math.max(0, state.regionMastery - region.masteryGoal);
+          state.character.rankProgress = Math.min(100, state.character.rankProgress + 35);
+
+          if (state.regionIndex + 1 < REGIONS.length) {
+            const nextIdx = state.regionIndex + 1;
+            if (nextIdx > state.unlockedRegionMax) {
+              state.unlockedRegionMax = nextIdx;
+            }
+            if (state.prefs.autoAdvance) {
+              state.regionIndex = nextIdx;
+              const nextRegion = REGIONS[nextIdx];
+              addLog(
+                state,
+                'milestone',
+                `Domínio alcançado. ${state.character.name} marchou para ${nextRegion.name} (${nextRegion.threatRoman}).`,
+                offlineCollector
+              );
+            } else {
+              addLog(
+                state,
+                'milestone',
+                `Marco regional concluído em ${region.name}. Nova região disponível para marcha.`,
+                offlineCollector
+              );
+            }
+          } else {
+            state.character.rankProgress = 100;
+            addLog(
+              state,
+              'milestone',
+              `${state.character.name} susteve a vigília no Abismo do Juramento Quebrado.`,
+              offlineCollector
+            );
+          }
+        }
+      }
+
+      function getCurrentRankTitle(level) {
+        let current = RANKS[0].title;
+        for (const r of RANKS) {
+          if (level >= r.minLevel) current = r.title;
+        }
+        return current;
+      }
+
+      /* ========================================================================
+         MÁQUINA DE ESTADOS AUTÔNOMA (DELTA TIME)
+         ======================================================================== */
+      function enterExploringState(state) {
+        const derived = computeDerivedStats(state);
+        state.sim.state = 'EXPLORING';
+        state.sim.progress = 0;
+        state.sim.duration = Math.max(2.2, 5.2 / derived.actionSpeed);
+        state.sim.enemy = null;
+        state.sim.forgingSlot = null;
+        const region = REGIONS[state.regionIndex] || REGIONS[0];
+        state.sim.detail = `Percorrendo ${region.name} em busca de vestígios ou embates...`;
+      }
+
+      function enterCombatState(state, offlineCollector) {
+        const enemy = spawnEnemyForRegion(state);
+        state.sim.state = 'COMBAT';
+        state.sim.progress = 0;
+        state.sim.duration = 1.6;
+        state.sim.enemy = enemy;
+        state.sim.forgingSlot = null;
+        state.sim.detail = `Enfrentando ${enemy.name} (${enemy.hp} PV).`;
+        addLog(state, 'combat', `Um perigo surgiu: ${enemy.name} interceptou o caminho.`, offlineCollector);
+      }
+
+      function enterRestingState(state, reasonText, offlineCollector) {
+        state.sim.state = 'RESTING';
+        state.sim.progress = 0;
+        state.sim.duration = 3.2;
+        state.sim.enemy = null;
+        state.sim.forgingSlot = null;
+        state.sim.detail = reasonText || 'Reunindo fôlego junto às cinzas frias...';
+        addLog(state, 'rest', state.sim.detail, offlineCollector);
+      }
+
+      function enterForgingState(state, slotKey) {
+        const item = state.gear[slotKey];
+        state.sim.state = 'FORGING';
+        state.sim.progress = 0;
+        state.sim.duration = 2.6;
+        state.sim.enemy = null;
+        state.sim.forgingSlot = slotKey;
+        state.sim.detail = `Trabalhando sobre ${item.name} (${item.slotLabel})...`;
+      }
+
+      function enterAdvancingState(state) {
+        const region = REGIONS[state.regionIndex] || REGIONS[0];
+        state.sim.state = 'ADVANCING';
+        state.sim.progress = 0;
+        state.sim.duration = 2.8;
+        state.sim.enemy = null;
+        state.sim.forgingSlot = null;
+        state.sim.detail = `Consolidando o domínio sobre ${region.name}...`;
+      }
+
+      function stepSimulation(state, dtSeconds, offlineCollector) {
+        if (dtSeconds <= 0) return;
+        state.elapsedWorldSec += dtSeconds;
+
+        const derived = computeDerivedStats(state);
+        state.character.maxHp = derived.maxHp;
+        if (state.character.hp > derived.maxHp) state.character.hp = derived.maxHp;
+
+        const sim = state.sim;
+        const stepIncrement = dtSeconds / Math.max(0.4, sim.duration);
+        sim.progress += stepIncrement;
+
+        if (sim.state === 'EXPLORING') {
+          grantSkillXp(state, 'passo_espectral', dtSeconds * 4.5, offlineCollector);
+          grantSkillXp(state, 'leitura_de_runas', dtSeconds * 3.5, offlineCollector);
+
+          if (sim.progress >= 1.0) {
+            sim.progress = 0;
+            const region = REGIONS[state.regionIndex] || REGIONS[0];
+            state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 14);
+            state.character.rankProgress = Math.min(100, Math.round((state.regionMastery / region.masteryGoal) * 100));
+
+            grantXp(state, 14 * region.threatPower, offlineCollector);
+            const marksFound = Math.max(2, Math.round(5 * region.threatPower));
+            const ashFound = Math.max(1, Math.round(2 * region.threatPower));
+            state.resources.marks += marksFound;
+            state.resources.ashes += ashFound;
+
+            // Chance de encontrar fragmento de relíquia
+            const relicChance = 0.14 + (getSkillRank(state, 'leitura_de_runas') - 1) * 0.02;
+            if (Math.random() < relicChance) {
+              state.resources.relics += 1;
+              addLog(
+                state,
+                'loot',
+                `Recolheu um Fragmento de Relíquia em ${region.name}.`,
+                offlineCollector
+              );
+            }
+
+            // Verifica transição de estado após explorar
+            const hpRatio = state.character.hp / Math.max(1, state.character.maxHp);
+            if (hpRatio < 0.42) {
+              enterRestingState(state, 'Vitalidade baixa; recolheu-se para recobrar forças.', offlineCollector);
+              return;
+            }
+
+            if (state.regionMastery >= region.masteryGoal) {
+              enterAdvancingState(state);
+              return;
+            }
+
+            const upgradeKey = findUpgradeableSlot(state);
+            if (upgradeKey && Math.random() < 0.45) {
+              enterForgingState(state, upgradeKey);
+              return;
+            }
+
+            if (Math.random() < 0.62) {
+              enterCombatState(state, offlineCollector);
+            } else {
+              addLog(
+                state,
+                'loot',
+                `Vasculhou ${region.name}: obteve ${marksFound} Marcas e ${ashFound} Cinzas.`,
+                offlineCollector
+              );
+              enterExploringState(state);
+            }
+          }
+        } else if (sim.state === 'COMBAT') {
+          const enemy = sim.enemy;
+          if (!enemy) {
+            enterExploringState(state);
+            return;
+          }
+
+          if (sim.progress >= 1.0) {
+            sim.progress = 0;
+
+            // Golpe do peregrino
+            const isCrit = Math.random() * 100 < derived.critChance;
+            const rawAtk = derived.physAtk + derived.arcanePower * 0.55;
+            const dmgDealt = Math.max(3, Math.round((rawAtk - enemy.def * 0.45) * (isCrit ? 1.65 : 1.0)));
+            enemy.hp -= dmgDealt;
+
+            grantSkillXp(state, 'golpe_dilacerante', 7, offlineCollector);
+            grantSkillXp(state, 'chama_contida', 6, offlineCollector);
+
+            if (enemy.hp <= 0) {
+              enemy.hp = 0;
+              const xpGain = grantXp(state, enemy.xpReward, offlineCollector);
+              state.resources.marks += enemy.marksReward;
+              state.resources.ashes += enemy.ashReward;
+              const region = REGIONS[state.regionIndex] || REGIONS[0];
+              state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 22);
+              state.character.rankProgress = Math.min(100, Math.round((state.regionMastery / region.masteryGoal) * 100));
+
+              addLog(
+                state,
+                'combat',
+                `Abateu ${enemy.name} (${dmgDealt} de dano${isCrit ? ' crítico' : ''}). Recebeu ${xpGain} XP e ${enemy.marksReward} Marcas.`,
+                offlineCollector
+              );
+
+              advanceRankAndRegionIfReady(state, offlineCollector);
+
+              if (state.character.hp / Math.max(1, state.character.maxHp) < 0.45) {
+                enterRestingState(state, 'Após o combate, buscou abrigo para estancar ferimentos.', offlineCollector);
+              } else {
+                enterExploringState(state);
+              }
+              return;
+            }
+
+            // Contra-ataque do adversário
+            const hazardMitigation = 1 - (derived.hazardResist / 100) * 0.25;
+            const dmgTaken = Math.max(1, Math.round((enemy.atk - derived.defense * 0.55) * hazardMitigation));
+            state.character.hp = Math.max(0, state.character.hp - dmgTaken);
+            grantSkillXp(state, 'muralha_de_cinzas', 6, offlineCollector);
+
+            sim.detail = `Troca golpes contra ${enemy.name} (${enemy.hp}/${enemy.maxHp} PV) · Sofreu ${dmgTaken} de dano.`;
+
+            // Recuo tático quando PV cai abaixo de 25%
+            if (state.character.hp <= Math.max(8, Math.round(state.character.maxHp * 0.25))) {
+              addLog(
+                state,
+                'combat',
+                `Recuo tático diante de ${enemy.name} com ${state.character.hp} PV restantes.`,
+                offlineCollector
+              );
+              enterRestingState(state, 'Recuou em segurança para recuperar a vitalidade.', offlineCollector);
+            }
+          }
+        } else if (sim.state === 'RESTING') {
+          grantSkillXp(state, 'resiliencia_inabalavel', dtSeconds * 5, offlineCollector);
+          const healPerSec = (state.character.maxHp * 0.14) * derived.restEfficiency;
+          state.character.hp = Math.min(state.character.maxHp, state.character.hp + healPerSec * dtSeconds);
+
+          if (sim.progress >= 1.0 || state.character.hp >= state.character.maxHp) {
+            state.character.hp = Math.min(state.character.maxHp, Math.round(state.character.hp));
+            enterExploringState(state);
+          }
+        } else if (sim.state === 'FORGING') {
+          if (sim.progress >= 1.0) {
+            completeGearUpgrade(state, sim.forgingSlot, offlineCollector);
+            enterExploringState(state);
+          }
+        } else if (sim.state === 'ADVANCING') {
+          if (sim.progress >= 1.0) {
+            advanceRankAndRegionIfReady(state, offlineCollector);
+            enterExploringState(state);
+          }
+        }
+      }
+
+      /* ========================================================================
+         PERSISTÊNCIA, PROGRESSO OFFLINE E EXPORTAÇÃO / IMPORTAÇÃO
+         ======================================================================== */
+      function saveToLocalStorage(state) {
+        if (!state) return;
+        try {
+          state.lastSavedAt = Date.now();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          showNotice('Não foi possível gravar no armazenamento local do navegador.');
+        }
+      }
+
+      function loadFromLocalStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || !parsed.character || !parsed.sim) return null;
+          return parsed;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function processOfflineCatchUp(state) {
+        const now = Date.now();
+        const last = state.lastSavedAt || now;
+        const rawElapsedSec = Math.max(0, (now - last) / 1000);
+        if (rawElapsedSec < 8) return null;
+
+        const simulatedSec = Math.min(MAX_OFFLINE_SECONDS, rawElapsedSec);
+        const startLevel = state.character.level;
+        const startMarks = state.resources.marks;
+        const startAshes = state.resources.ashes;
+        const highlights = [];
+
+        // Simula em passos de 1 segundo para estabilidade e precisão
+        const stepSize = 1.0;
+        let remaining = simulatedSec;
+        while (remaining > 0) {
+          const dt = Math.min(stepSize, remaining);
+          stepSimulation(state, dt, highlights);
+          remaining -= dt;
+        }
+
+        state.character.hp = Math.round(state.character.hp);
+        state.lastSavedAt = now;
+
+        return {
+          rawElapsedSec,
+          simulatedSec,
+          capped: rawElapsedSec > MAX_OFFLINE_SECONDS,
+          levelsGained: Math.max(0, state.character.level - startLevel),
+          marksGained: Math.max(0, state.resources.marks - startMarks),
+          ashesGained: Math.max(0, state.resources.ashes - startAshes),
+          highlights
+        };
+      }
+
+      function openOfflineReportModal(report) {
+        document.getElementById('offlineSummarySubtitle').textContent =
+          `Tempo decorrido: ${formatClock(report.rawElapsedSec)} · Simulado: ${formatClock(report.simulatedSec)}${report.capped ? ' (limite de 24h aplicado)' : ''}.`;
+
+        const statsEl = document.getElementById('offlineSummaryStats');
+        statsEl.innerHTML = `
+          <div class="derived-item"><span>Níveis Obtidos</span><strong>+${report.levelsGained}</strong></div>
+          <div class="derived-item"><span>Nível Atual</span><strong>${game.character.level}</strong></div>
+          <div class="derived-item"><span>Marcas Ganhas</span><strong>+${report.marksGained}</strong></div>
+          <div class="derived-item"><span>Cinzas Ganhas</span><strong>+${report.ashesGained}</strong></div>
+        `;
+
+        const listEl = document.getElementById('offlineHighlightsList');
+        if (report.highlights.length === 0) {
+          listEl.innerHTML = '<div class="log-entry"><div class="log-text">A vigília prosseguiu sem marcos extraordinários registrados.</div></div>';
+        } else {
+          listEl.innerHTML = report.highlights.map(h => `
+            <div class="log-entry cat-${h.category}">
+              <div class="log-meta"><span>${h.ts}</span><span>${h.category.toUpperCase()}</span></div>
+              <div class="log-text">${escapeHtml(h.text)}</div>
+            </div>
+          `).join('');
+        }
+
+        document.getElementById('offlineModal').classList.add('open');
+      }
+
+      /* ========================================================================
+         RENDERIZAÇÃO DA INTERFACE (HUD)
+         ======================================================================== */
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function renderHud() {
+        if (!game) return;
+        const c = game.character;
+        const origin = ORIGINS[c.originId] || ORIGINS.winterborn;
+        const vocation = VOCATIONS[c.vocationId] || VOCATIONS.penitent;
+        const region = REGIONS[game.regionIndex] || REGIONS[0];
+        const derived = computeDerivedStats(game);
+
+        // Cabeçalho & Identidade
+        document.getElementById('hudLevelTag').textContent = `Nível ${c.level}`;
+        document.getElementById('hudCharName').textContent = c.name;
+        document.getElementById('hudCharOriginVocation').textContent = `${origin.name} · ${vocation.name}`;
+        document.getElementById('hudCharRank').textContent = `Patamar: ${getCurrentRankTitle(c.level)}`;
+        document.getElementById('hudCycleClock').textContent = formatClock(game.elapsedWorldSec);
+
+        // Barras principais
+        const hpNow = Math.max(0, Math.round(c.hp));
+        const hpMax = Math.max(1, Math.round(c.maxHp));
+        const hpPct = Math.min(100, Math.max(0, (hpNow / hpMax) * 100));
+        document.getElementById('hudHpText').textContent = `${hpNow} / ${hpMax}`;
+        document.getElementById('hudHpBar').style.width = `${hpPct}%`;
+
+        const xpPct = Math.min(100, Math.max(0, (c.xp / Math.max(1, c.xpNext)) * 100));
+        document.getElementById('hudXpText').textContent = `${Math.floor(c.xp)} / ${c.xpNext}`;
+        document.getElementById('hudXpBar').style.width = `${xpPct}%`;
+
+        const rankPct = Math.min(100, Math.max(0, c.rankProgress));
+        document.getElementById('hudRankText').textContent = `${rankPct}%`;
+        document.getElementById('hudRankBar').style.width = `${rankPct}%`;
+
+        // Recursos
+        document.getElementById('hudMarks').textContent = String(game.resources.marks);
+        document.getElementById('hudAshes').textContent = String(game.resources.ashes);
+        document.getElementById('hudRelics').textContent = String(game.resources.relics);
+
+        // Atributos base
+        document.getElementById('hudBaseStats').innerHTML = ATTR_META.map(m => `
+          <div class="stat-cell" title="${escapeHtml(m.desc)}">
+            <span class="stat-abbr">${m.key}</span>
+            <span class="stat-val">${c.baseAttrs[m.key]}</span>
+          </div>
+        `).join('');
+
+        // Atributos derivados
+        document.getElementById('hudDerivedStats').innerHTML = `
+          <div class="derived-item"><span>Ataque Físico</span><strong>${derived.physAtk}</strong></div>
+          <div class="derived-item"><span>Poder Arcano</span><strong>${derived.arcanePower}</strong></div>
+          <div class="derived-item"><span>Defesa</span><strong>${derived.defense}</strong></div>
+          <div class="derived-item"><span>Chance Crítica</span><strong>${derived.critChance}%</strong></div>
+          <div class="derived-item"><span>Vel. Ação</span><strong>${derived.actionSpeed}x</strong></div>
+          <div class="derived-item"><span>Res. Perigos</span><strong>${derived.hazardResist}%</strong></div>
+        `;
+
+        // Estado Autônomo
+        const stateLabels = {
+          EXPLORING: 'Explorando a Região',
+          COMBAT: 'Em Combate',
+          RESTING: 'Descansando e Recuperando',
+          FORGING: 'Aprimorando Equipamento',
+          ADVANCING: 'Avançando de Patamar'
+        };
+        const fillClasses = {
+          EXPLORING: 'fill-action',
+          COMBAT: 'fill-combat',
+          RESTING: 'fill-hp',
+          FORGING: 'fill-forging',
+          ADVANCING: 'fill-advancing'
+        };
+
+        const banner = document.getElementById('stateBanner');
+        banner.className = `state-banner state-${game.sim.state}`;
+        document.getElementById('stateLabel').textContent = stateLabels[game.sim.state] || game.sim.state;
+        document.getElementById('stateCode').textContent = game.sim.state;
+        document.getElementById('stateDetail').textContent = game.sim.detail;
+
+        const actPct = Math.min(100, Math.max(0, Math.round(game.sim.progress * 100)));
+        document.getElementById('stateProgressPct').textContent = `${actPct}%`;
+        const pBar = document.getElementById('stateProgressBar');
+        pBar.className = `bar-fill ${fillClasses[game.sim.state] || 'fill-action'}`;
+        pBar.style.width = `${actPct}%`;
+
+        // Adversário em combate
+        const enemyCard = document.getElementById('enemyCard');
+        if (game.sim.state === 'COMBAT' && game.sim.enemy) {
+          enemyCard.style.display = 'flex';
+          const en = game.sim.enemy;
+          const eHp = Math.max(0, en.hp);
+          const ePct = Math.min(100, Math.max(0, (eHp / Math.max(1, en.maxHp)) * 100));
+          document.getElementById('enemyName').textContent = en.name;
+          document.getElementById('enemyMeta').textContent = `ATQ ${en.atk} · DEF ${en.def}`;
+          document.getElementById('enemyHpText').textContent = `${eHp} / ${en.maxHp}`;
+          document.getElementById('enemyHpBar').style.width = `${ePct}%`;
+        } else {
+          enemyCard.style.display = 'none';
+        }
+
+        // Região e Marcos
+        document.getElementById('hudThreatLevel').textContent = region.threatRoman;
+        document.getElementById('hudRegionName').textContent = region.name;
+        document.getElementById('hudRegionDesc').textContent = region.desc;
+        const mPct = Math.min(100, Math.max(0, (game.regionMastery / region.masteryGoal) * 100));
+        document.getElementById('hudRegionMasteryText').textContent = `${Math.floor(game.regionMastery)} / ${region.masteryGoal}`;
+        document.getElementById('hudRegionMasteryBar').style.width = `${mPct}%`;
+
+        document.getElementById('regionListContainer').innerHTML = REGIONS.map((reg, idx) => {
+          const unlocked = idx <= game.unlockedRegionMax;
+          const isCurrent = idx === game.regionIndex;
+          const cls = isCurrent ? 'region-node current' : (unlocked ? 'region-node' : 'region-node locked');
+          return `
+            <div class="${cls}">
+              <div>
+                <strong>${escapeHtml(reg.name)}</strong>
+                <div style="font-size:0.68rem; color:var(--text-muted);">${reg.threatRoman}</div>
+              </div>
+              ${unlocked && !isCurrent
+                ? `<button type="button" class="btn-sm" data-travel-region="${idx}">Marchar</button>`
+                : `<span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-secondary);">${isCurrent ? 'Atual' : 'Bloqueada'}</span>`
+              }
+            </div>
+          `;
+        }).join('');
+
+        // Botões de preferência
+        const btnAutoUp = document.getElementById('btnAutoUpgrade');
+        btnAutoUp.textContent = `Auto-Aprimorar: ${game.prefs.autoUpgrade ? 'Ligado' : 'Desligado'}`;
+        btnAutoUp.classList.toggle('active-toggle', game.prefs.autoUpgrade);
+
+        const btnAutoAdv = document.getElementById('btnAutoAdvance');
+        btnAutoAdv.textContent = `Auto-Avançar: ${game.prefs.autoAdvance ? 'Ligado' : 'Desligado'}`;
+        btnAutoAdv.classList.toggle('active-toggle', game.prefs.autoAdvance);
+
+        // Equipamentos
+        document.getElementById('gearListContainer').innerHTML = ['weapon', 'armor', 'relic'].map(slotKey => {
+          const item = game.gear[slotKey];
+          const rarityName = RARITIES[item.rarityIdx] || 'Comum';
+          const cost = getUpgradeCost(item);
+          const canAfford = game.resources.marks >= cost.marksCost && game.resources.ashes >= cost.ashesCost;
+          return `
+            <div class="gear-slot">
+              <div class="gear-top">
+                <span class="gear-slot-name">${escapeHtml(item.slotLabel)}</span>
+                <span class="gear-rarity rar-${escapeHtml(rarityName)}">${escapeHtml(rarityName)} · +${item.level}</span>
+              </div>
+              <div class="gear-item-title">${escapeHtml(item.name)}</div>
+              <div class="gear-meta">
+                <span>Custo: ${cost.marksCost}M / ${cost.ashesCost}C</span>
+                <button type="button" class="btn-sm" data-upgrade-slot="${slotKey}" ${canAfford ? '' : 'disabled'}>Forjar Agora</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Habilidades
+        document.getElementById('skillsListContainer').innerHTML = game.skills.map(sk => {
+          const sPct = Math.min(100, Math.max(0, (sk.xp / Math.max(1, sk.xpNext)) * 100));
+          return `
+            <div class="skill-row">
+              <div class="skill-head">
+                <span class="skill-name">${escapeHtml(sk.name)}</span>
+                <span class="skill-rank">Grau ${sk.rank}</span>
+              </div>
+              <div class="skill-desc">${escapeHtml(sk.desc)}</div>
+              <div class="bar-track thin" style="margin-top: 2px;">
+                <div class="bar-fill fill-xp" style="width: ${sPct}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Crônica de Eventos
+        const filteredLogs = activeLogFilter === 'all'
+          ? game.logs
+          : game.logs.filter(l => l.category === activeLogFilter);
+
+        document.getElementById('hudLogCount').textContent = `${filteredLogs.length} registros`;
+        const logStream = document.getElementById('logStream');
+        if (filteredLogs.length === 0) {
+          logStream.innerHTML = '<div class="log-entry"><div class="log-text">Nenhum registro nesta categoria ainda.</div></div>';
+        } else {
+          logStream.innerHTML = filteredLogs.slice(0, 80).map(l => `
+            <div class="log-entry cat-${escapeHtml(l.category)}">
+              <div class="log-meta">
+                <span>${escapeHtml(l.ts)}</span>
+                <span>${escapeHtml(l.category.toUpperCase())}</span>
+              </div>
+              <div class="log-text">${escapeHtml(l.text)}</div>
+            </div>
+          `).join('');
+        }
+      }
+
+      /* ========================================================================
+         MODAL DE CRIAÇÃO DE PERSONAGEM
+         ======================================================================== */
+      function resetDraftCreation() {
+        draftCreation = {
+          name: NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)],
+          originId: 'winterborn',
+          vocationId: 'penitent',
+          alloc: { FOR: 0, DES: 0, VIT: 0, INT: 0, VON: 0 },
+          poolTotal: 6
+        };
+        populateCreationForm();
+      }
+
+      function populateCreationForm() {
+        const originSel = document.getElementById('selectOrigin');
+        const vocSel = document.getElementById('selectVocation');
+
+        originSel.innerHTML = Object.values(ORIGINS)
+          .map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`)
+          .join('');
+        vocSel.innerHTML = Object.values(VOCATIONS)
+          .map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`)
+          .join('');
+
+        document.getElementById('inputCharName').value = draftCreation.name;
+        originSel.value = draftCreation.originId;
+        vocSel.value = draftCreation.vocationId;
+
+        updateCreationFlavorAndPool();
+      }
+
+      function updateCreationFlavorAndPool() {
+        const origin = ORIGINS[draftCreation.originId] || ORIGINS.winterborn;
+        const voc = VOCATIONS[draftCreation.vocationId] || VOCATIONS.penitent;
+
+        document.getElementById('creationFlavorText').textContent =
+          `${origin.flavor} ${voc.flavor}`;
+
+        const spent = Object.values(draftCreation.alloc).reduce((acc, v) => acc + v, 0);
+        const remaining = Math.max(0, draftCreation.poolTotal - spent);
+        document.getElementById('allocRemaining').textContent = String(remaining);
+
+        document.getElementById('allocRowsContainer').innerHTML = ATTR_META.map(m => {
+          const baseVal = 5 + (origin.mods[m.key] || 0) + (voc.mods[m.key] || 0) + (draftCreation.alloc[m.key] || 0);
+          const added = draftCreation.alloc[m.key] || 0;
+          return `
+            <div class="alloc-row">
+              <div>
+                <strong style="font-size:0.82rem;">${escapeHtml(m.label)} (${m.key})</strong>
+                <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(m.desc)}</div>
+              </div>
+              <div class="alloc-controls">
+                <button type="button" class="btn-sm" data-alloc-dec="${m.key}" ${added > 0 ? '' : 'disabled'}>-</button>
+                <span style="min-width: 24px; text-align: center; font-weight: 700;">${baseVal}</span>
+                <button type="button" class="btn-sm" data-alloc-inc="${m.key}" ${remaining > 0 ? '' : 'disabled'}>+</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function openCreationModal() {
+        resetDraftCreation();
+        document.getElementById('creationModal').classList.add('open');
+      }
+
+      function closeCreationModal() {
+        document.getElementById('creationModal').classList.remove('open');
+      }
+
+      /* ========================================================================
+         EVENTOS DA INTERFACE E LOOP PRINCIPAL
+         ======================================================================== */
+      function bindEvents() {
+        // Pausar / Velocidade
+        document.getElementById('btnTogglePause').addEventListener('click', () => {
+          isPaused = !isPaused;
+          document.getElementById('btnTogglePause').textContent = isPaused ? 'Retomar' : 'Pausar';
+          document.getElementById('simStatusText').textContent = isPaused ? 'Simulação Pausada' : 'Simulação Ativa';
+          document.getElementById('simStatusDot').classList.toggle('paused', isPaused);
+        });
+
+        document.getElementById('btnSpeedToggle').addEventListener('click', () => {
+          simSpeed = simSpeed === 1 ? 2 : (simSpeed === 2 ? 4 : 1);
+          document.getElementById('btnSpeedToggle').textContent = `Velocidade: ${simSpeed}x`;
+        });
+
+        document.getElementById('btnDismissNotice').addEventListener('click', hideNotice);
+
+        // Preferências de autonomia
+        document.getElementById('btnAutoUpgrade').addEventListener('click', () => {
+          if (!game) return;
+          game.prefs.autoUpgrade = !game.prefs.autoUpgrade;
+          saveToLocalStorage(game);
+          renderHud();
+        });
+
+        document.getElementById('btnAutoAdvance').addEventListener('click', () => {
+          if (!game) return;
+          game.prefs.autoAdvance = !game.prefs.autoAdvance;
+          saveToLocalStorage(game);
+          renderHud();
+        });
+
+        // Ações delegadas de regiões e forja manual
+        document.getElementById('regionListContainer').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-travel-region]');
+          if (!btn || !game) return;
+          const targetIdx = Number(btn.getAttribute('data-travel-region'));
+          if (targetIdx >= 0 && targetIdx <= game.unlockedRegionMax && targetIdx !== game.regionIndex) {
+            game.regionIndex = targetIdx;
+            game.regionMastery = 0;
+            const reg = REGIONS[targetIdx];
+            addLog(game, 'milestone', `Marchou por vontade própria para ${reg.name} (${reg.threatRoman}).`);
+            enterExploringState(game);
+            saveToLocalStorage(game);
+            renderHud();
+          }
+        });
+
+        document.getElementById('gearListContainer').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-upgrade-slot]');
+          if (!btn || !game) return;
+          const slotKey = btn.getAttribute('data-upgrade-slot');
+          const item = game.gear[slotKey];
+          if (!item) return;
+          const cost = getUpgradeCost(item);
+          if (game.resources.marks >= cost.marksCost && game.resources.ashes >= cost.ashesCost) {
+            completeGearUpgrade(game, slotKey);
+            saveToLocalStorage(game);
+            renderHud();
+          }
+        });
+
+        // Filtros do log
+        document.getElementById('logFilterBar').addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-filter]');
+          if (!btn) return;
+          activeLogFilter = btn.getAttribute('data-filter');
+          document.querySelectorAll('#logFilterBar button').forEach(b => {
+            b.classList.toggle('active-toggle', b.getAttribute('data-filter') === activeLogFilter);
+          });
+          renderHud();
+        });
+
+        // Modal de Criação
+        document.getElementById('btnRandomName').addEventListener('click', () => {
+          const pick = NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)];
+          draftCreation.name = pick;
+          document.getElementById('inputCharName').value = pick;
+        });
+
+        document.getElementById('inputCharName').addEventListener('input', (e) => {
+          draftCreation.name = e.target.value;
+        });
+
+        document.getElementById('selectOrigin').addEventListener('change', (e) => {
+          draftCreation.originId = e.target.value;
+          updateCreationFlavorAndPool();
+        });
+
+        document.getElementById('selectVocation').addEventListener('change', (e) => {
+          draftCreation.vocationId = e.target.value;
+          updateCreationFlavorAndPool();
+        });
+
+        document.getElementById('allocRowsContainer').addEventListener('click', (e) => {
+          const inc = e.target.closest('[data-alloc-inc]');
+          const dec = e.target.closest('[data-alloc-dec]');
+          const spent = Object.values(draftCreation.alloc).reduce((a, b) => a + b, 0);
+          if (inc) {
+            const key = inc.getAttribute('data-alloc-inc');
+            if (spent < draftCreation.poolTotal) {
+              draftCreation.alloc[key] = (draftCreation.alloc[key] || 0) + 1;
+              updateCreationFlavorAndPool();
+            }
+          } else if (dec) {
+            const key = dec.getAttribute('data-alloc-dec');
+            if ((draftCreation.alloc[key] || 0) > 0) {
+              draftCreation.alloc[key] -= 1;
+              updateCreationFlavorAndPool();
+            }
+          }
+        });
+
+        document.getElementById('btnForgeRandom').addEventListener('click', () => {
+          const origKeys = Object.keys(ORIGINS);
+          const vocKeys = Object.keys(VOCATIONS);
+          draftCreation.name = NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)];
+          draftCreation.originId = origKeys[Math.floor(Math.random() * origKeys.length)];
+          draftCreation.vocationId = vocKeys[Math.floor(Math.random() * vocKeys.length)];
+          draftCreation.alloc = { FOR: 0, DES: 0, VIT: 0, INT: 0, VON: 0 };
+
+          const keys = ATTR_META.map(m => m.key);
+          for (let i = 0; i < draftCreation.poolTotal; i++) {
+            const rk = keys[Math.floor(Math.random() * keys.length)];
+            draftCreation.alloc[rk] += 1;
+          }
+
+          populateCreationForm();
+        });
+
+        document.getElementById('btnConfirmCreation').addEventListener('click', () => {
+          game = createNewGameState(draftCreation);
+          enterExploringState(game);
+          saveToLocalStorage(game);
+          closeCreationModal();
+          renderHud();
+        });
+
+        // Modal Offline
+        document.getElementById('btnCloseOfflineModal').addEventListener('click', () => {
+          document.getElementById('offlineModal').classList.remove('open');
+        });
+
+        // Modal Salvamento / Exportar / Importar
+        document.getElementById('btnOpenSaveModal').addEventListener('click', () => {
+          if (game) {
+            document.getElementById('saveJsonArea').value = JSON.stringify(game, null, 2);
+          }
+          document.getElementById('saveModal').classList.add('open');
+        });
+
+        document.getElementById('btnCloseSaveModal').addEventListener('click', () => {
+          document.getElementById('saveModal').classList.remove('open');
+        });
+
+        document.getElementById('btnExportSave').addEventListener('click', () => {
+          if (!game) return;
+          saveToLocalStorage(game);
+          document.getElementById('saveJsonArea').value = JSON.stringify(game, null, 2);
+          showNotice('Código JSON atualizado no campo de exportação.');
+        });
+
+        document.getElementById('btnCopySave').addEventListener('click', () => {
+          const area = document.getElementById('saveJsonArea');
+          area.select();
+          try {
+            document.execCommand('copy');
+            showNotice('Código de salvamento copiado.');
+          } catch (err) {
+            showNotice('Selecione o texto na caixa e copie manualmente.');
+          }
+        });
+
+        document.getElementById('btnImportSave').addEventListener('click', () => {
+          const raw = document.getElementById('saveJsonArea').value.trim();
+          if (!raw) {
+            showNotice('Cole um código JSON válido antes de importar.');
+            return;
+          }
+          try {
+            const imported = JSON.parse(raw);
+            if (!imported || !imported.character || !imported.sim || !imported.skills) {
+              throw new Error('Estrutura inválida');
+            }
+            game = imported;
+            saveToLocalStorage(game);
+            document.getElementById('saveModal').classList.remove('open');
+            renderHud();
+            showNotice('Crônica importada com sucesso.');
+          } catch (err) {
+            showNotice('Falha ao importar: o JSON fornecido é inválido ou está incompleto.');
+          }
+        });
+
+        // Modal Reset / Novo Juramento
+        document.getElementById('btnOpenResetModal').addEventListener('click', () => {
+          document.getElementById('resetModal').classList.add('open');
+        });
+
+        document.getElementById('btnCancelReset').addEventListener('click', () => {
+          document.getElementById('resetModal').classList.remove('open');
+        });
+
+        document.getElementById('btnConfirmReset').addEventListener('click', () => {
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (e) {}
+          game = null;
+          document.getElementById('resetModal').classList.remove('open');
+          openCreationModal();
+        });
+
+        // Modal Guia
+        document.getElementById('btnOpenGuideModal').addEventListener('click', () => {
+          document.getElementById('guideModal').classList.add('open');
+        });
+
+        document.getElementById('btnCloseGuideModal').addEventListener('click', () => {
+          document.getElementById('guideModal').classList.remove('open');
+        });
+
+        // Salvamento ao sair ou ocultar aba
+        window.addEventListener('beforeunload', () => {
+          if (game) saveToLocalStorage(game);
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden && game) saveToLocalStorage(game);
+        });
+      }
+
+      function mainLoop(now) {
+        const rawDt = Math.min(0.5, Math.max(0, (now - lastFrameTime) / 1000));
+        lastFrameTime = now;
+
+        if (game && !isPaused) {
+          const effectiveDt = rawDt * simSpeed;
+          stepSimulation(game, effectiveDt);
+          saveAccumulator += rawDt;
+          if (saveAccumulator >= 5.0) {
+            saveAccumulator = 0;
+            saveToLocalStorage(game);
+          }
+          renderHud();
+        }
+
+        requestAnimationFrame(mainLoop);
+      }
+
+      /* ========================================================================
+         INICIALIZAÇÃO
+         ======================================================================== */
+      window.addEventListener('DOMContentLoaded', () => {
+        bindEvents();
+
+        const saved = loadFromLocalStorage();
+        if (saved) {
+          game = saved;
+          const offlineReport = processOfflineCatchUp(game);
+          saveToLocalStorage(game);
+          renderHud();
+          if (offlineReport) {
+            openOfflineReportModal(offlineReport);
+          }
+        } else {
+          renderHud();
+          openCreationModal();
+        }
+
+        lastFrameTime = performance.now();
+        requestAnimationFrame(mainLoop);
+      });
+    })();
+  </script>
+</body>
+</html>
+```
