@@ -1,14 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crônica das Cinzas — Simulação Autônoma de Fantasia Sombria</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* ==========================================================================
-       VARIÁVEIS DE TEMA E ESTÉTICA MANUSCRITO / FANTASIA SOMBRIA
-       ========================================================================== */
     :root {
       --bg-void: #0d0f12;
       --bg-panel: #14181f;
@@ -63,9 +60,6 @@
       overflow-x: hidden;
     }
 
-    /* ==========================================================================
-       ESTRUTURA PRINCIPAL E RESPONSIVIDADE PARA EMBED (GOOGLE SITES)
-       ========================================================================== */
     .app-shell {
       width: 100%;
       max-width: 1440px;
@@ -141,12 +135,21 @@
       box-shadow: 0 0 8px var(--accent-sage);
     }
 
-    .status-dot.paused {
-      background: var(--accent-gold);
+    .status-dot.offline {
+      background: var(--text-muted);
       box-shadow: none;
     }
 
-    /* Grid principal adaptativo (3 colunas em telas amplas, 2 colunas em médias, 1 em estreitas) */
+    .status-dot.syncing {
+      background: var(--accent-gold);
+      box-shadow: 0 0 8px var(--accent-gold);
+    }
+
+    .status-dot.error {
+      background: var(--accent-crimson);
+      box-shadow: 0 0 8px var(--accent-crimson);
+    }
+
     .main-grid {
       display: grid;
       grid-template-columns: minmax(270px, 1fr) minmax(320px, 1.35fr) minmax(280px, 1fr);
@@ -178,9 +181,6 @@
       gap: 12px;
     }
 
-    /* ==========================================================================
-       PAINÉIS, CARTÕES E TIPOGRAFIA
-       ========================================================================== */
     .panel {
       background: var(--bg-panel);
       border: 1px solid var(--border-subtle);
@@ -227,9 +227,6 @@
       line-height: 1.45;
     }
 
-    /* ==========================================================================
-       BOTÕES E CONTROLES DE PREFERÊNCIA
-       ========================================================================== */
     button {
       font-family: var(--font-sans);
       font-size: 0.78rem;
@@ -272,6 +269,16 @@
       background: linear-gradient(180deg, #4b3921 0%, #342817 100%);
     }
 
+    button.btn-cloud {
+      background: var(--accent-indigo-soft);
+      border-color: var(--accent-indigo);
+      color: #cdd5ff;
+    }
+
+    button.btn-cloud:hover:not(:disabled) {
+      background: rgba(92, 107, 192, 0.28);
+    }
+
     button.btn-danger {
       background: var(--accent-crimson-soft);
       border-color: var(--accent-crimson);
@@ -294,9 +301,6 @@
       color: #c7e5d5;
     }
 
-    /* ==========================================================================
-       BARRAS DE PROGRESSO E ESTADOS AUTÔNOMOS
-       ========================================================================== */
     .state-banner {
       background: var(--bg-elevated);
       border: 1px solid var(--border-subtle);
@@ -400,9 +404,6 @@
     .fill-rank { background: linear-gradient(90deg, #8c672a 0%, var(--accent-gold) 100%); }
     .fill-threat { background: linear-gradient(90deg, #5c3a21 0%, #b36b38 100%); }
 
-    /* ==========================================================================
-       CARTÃO DE COMBATE / ADVERSÁRIO
-       ========================================================================== */
     .enemy-card {
       background: var(--bg-input);
       border: 1px solid rgba(158, 59, 59, 0.45);
@@ -433,9 +434,6 @@
       color: var(--text-secondary);
     }
 
-    /* ==========================================================================
-       ATRIBUTOS, DERIVADOS, EQUIPAMENTOS, HABILIDADES E REGIÕES
-       ========================================================================== */
     .identity-box {
       display: flex;
       flex-direction: column;
@@ -552,7 +550,6 @@
       color: var(--accent-gold);
     }
 
-    /* Equipamentos */
     .gear-list {
       display: flex;
       flex-direction: column;
@@ -612,7 +609,6 @@
       font-family: var(--font-mono);
     }
 
-    /* Habilidades / Maestria */
     .skills-list {
       display: flex;
       flex-direction: column;
@@ -655,7 +651,6 @@
       color: var(--text-secondary);
     }
 
-    /* Regiões e Marcos */
     .region-box {
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
@@ -708,15 +703,6 @@
       opacity: 0.5;
     }
 
-    .toggles-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    /* ==========================================================================
-       CRÔNICA / LOG DE EVENTOS
-       ========================================================================== */
     .log-filters {
       display: flex;
       flex-wrap: wrap;
@@ -770,9 +756,6 @@
       line-height: 1.4;
     }
 
-    /* ==========================================================================
-       MODAIS (CRIAÇÃO DE PERSONAGEM, RELATÓRIO OFFLINE, SAVE/EXPORTAR, GUIA)
-       ========================================================================== */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -839,7 +822,7 @@
       letter-spacing: 0.04em;
     }
 
-    input[type="text"], textarea, select {
+    input[type="text"], input[type="email"], input[type="password"], textarea, select {
       width: 100%;
       background: var(--bg-input);
       border: 1px solid var(--border-strong);
@@ -850,13 +833,13 @@
       font-size: 0.84rem;
     }
 
-    input[type="text"]:focus, textarea:focus, select:focus {
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--accent-gold);
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 110px;
       font-family: var(--font-mono);
       font-size: 0.74rem;
       resize: vertical;
@@ -889,6 +872,31 @@
       font-style: italic;
       font-size: 0.8rem;
       color: var(--text-secondary);
+    }
+
+    .cloud-feedback {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--accent-indigo);
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      display: none;
+    }
+
+    .cloud-feedback.visible {
+      display: block;
+    }
+
+    .cloud-feedback.err {
+      border-left-color: var(--accent-crimson);
+      color: #f0b8b8;
+    }
+
+    .cloud-feedback.ok {
+      border-left-color: var(--accent-sage);
+      color: #c7e5d5;
     }
 
     .modal-footer {
@@ -934,16 +942,21 @@
           <span class="status-dot" id="simStatusDot"></span>
           <span id="simStatusText">Simulação Ativa</span>
         </div>
+        <div class="status-pill" id="cloudStatusPill" title="Estado do salvamento em nuvem (Supabase)">
+          <span class="status-dot offline" id="cloudStatusDot"></span>
+          <span id="cloudStatusText">Nuvem: Desconectado</span>
+        </div>
         <div class="status-pill" title="Velocidade travada em tempo real">
           <span>Ritmo: 1x (Tempo Real)</span>
         </div>
+        <button type="button" class="btn-sm btn-cloud" id="btnOpenCloudModal">Conta / Nuvem</button>
         <button type="button" class="btn-sm" id="btnOpenSaveModal">Exportar / Importar Código</button>
         <button type="button" class="btn-sm" id="btnOpenGuideModal">Guia e Sites</button>
         <button type="button" class="btn-sm btn-danger" id="btnOpenResetModal">Novo Juramento</button>
       </div>
     </header>
 
-    <!-- AVISO / MENSAGEM DO SISTEMA (SEM ALERT) -->
+    <!-- AVISO / MENSAGEM DO SISTEMA -->
     <div class="notice-banner" id="systemNotice">
       <span id="systemNoticeText"></span>
       <button type="button" class="btn-sm" id="btnDismissNotice">Fechar</button>
@@ -1152,8 +1165,12 @@
     <div class="modal-card">
       <h2 class="modal-title" id="creationModalTitle">Tomar o Juramento das Cinzas</h2>
       <p class="serif-quote">
-        Nenhum nome é esquecido pelas cinzas, mas poucos suportam o peso do caminho. Defina quem marcha antes que a vigília comece.
+        Nenhum nome é esquecido pelas cinzas, mas poucos suportam o peso do caminho. Defina quem marcha antes que a vigília comece — ou entre na sua conta na nuvem para continuar sua jornada existente.
       </p>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-cloud" id="btnCreationOpenCloud">Já tenho conta na Nuvem (Entrar)</button>
+      </div>
 
       <div class="field-group">
         <label class="field-label" for="inputCharName">Nome do Peregrino</label>
@@ -1213,7 +1230,7 @@
     <div class="modal-card">
       <h2 class="modal-title" id="saveModalTitle">Código Portátil da Crônica</h2>
       <p class="serif-quote">
-        O progresso é salvo automaticamente neste navegador. Gere e copie o código codificado abaixo para guardar uma cópia segura ou restaurar sua jornada em qualquer dispositivo.
+        Além da sincronização na nuvem, o progresso também é salvo localmente neste navegador. Gere e copie o código codificado abaixo para guardar uma cópia extra de segurança.
       </p>
       <div style="display: flex; flex-wrap: wrap; gap: 8px;">
         <button type="button" id="btnExportSave">Gerar Código Portátil</button>
@@ -1237,7 +1254,7 @@
     <div class="modal-card">
       <h2 class="modal-title" id="resetModalTitle">Encerrar a Crônica Atual</h2>
       <p class="serif-quote">
-        Ao romper este juramento, o peregrino atual e seu histórico local serão apagados permanentemente. Deseja forjar uma nova jornada?
+        Ao romper este juramento, o peregrino atual e seu histórico local serão apagados permanentemente. Se estiver conectado na nuvem, o novo peregrino substituirá o save ao iniciar. Deseja forjar uma nova jornada?
       </p>
       <div class="modal-footer">
         <button type="button" id="btnCancelReset">Manter Jornada Atual</button>
@@ -1254,6 +1271,7 @@
       <h2 class="modal-title" id="guideModalTitle">Crônica das Cinzas — Guia e Google Sites</h2>
       <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
         <p><strong style="color: var(--text-primary);">Simulação 100% Zero-Player:</strong> Uma vez iniciado o juramento, toda decisão pertence exclusivamente ao peregrino: escolha de postura tática, recuo estratégico, descanso, forja de equipamentos, estudo de disciplinas, distribuição de atributos ao subir de nível e marcha para novas regiões ocorrem em ritmo solene e autônomo (1x em tempo real).</p>
+        <p><strong style="color: var(--text-primary);">Salvamento em Nuvem (Desktop e Mobile):</strong> Clique em <strong>Conta / Nuvem</strong> para cadastrar um e-mail (com confirmação por e-mail) e entrar em qualquer dispositivo. O progresso é sincronizado automaticamente na nuvem e no navegador.</p>
         <p><strong style="color: var(--text-primary);">Progresso Offline:</strong> Ao fechar ou recarregar a página, o tempo decorrido é calculado com base no carimbo real de horário (até 24 horas por retorno), simulando encontros, recuperações, recursos e conquistas.</p>
         <p><strong style="color: var(--text-primary);">Como incorporar no Google Sites:</strong></p>
         <ol style="padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
@@ -1268,15 +1286,94 @@
     </div>
   </div>
 
+  <!-- ========================================================================
+       MODAL 6: CONTA E SALVAMENTO EM NUVEM (SUPABASE)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="cloudModal" role="dialog" aria-modal="true" aria-labelledby="cloudModalTitle">
+    <div class="modal-card">
+      <h2 class="modal-title" id="cloudModalTitle">Salvamento em Nuvem — Conta do Peregrino</h2>
+      <p class="serif-quote">
+        Sincronize sua crônica entre computador e celular. Novos cadastros exigem confirmação pelo link enviado ao seu e-mail antes do primeiro acesso.
+      </p>
+
+      <div class="cloud-feedback" id="cloudFeedbackBox"></div>
+
+      <!-- Visão quando DESLOGADO -->
+      <div id="cloudLoggedOutView" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn-sm active-toggle" id="btnTabCloudLogin">Entrar</button>
+          <button type="button" class="btn-sm" id="btnTabCloudSignup">Cadastrar E-mail</button>
+        </div>
+
+        <form id="cloudAuthForm" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="field-group">
+            <label class="field-label" for="cloudEmailInput">E-mail</label>
+            <input type="email" id="cloudEmailInput" required autocomplete="email" placeholder="seu-email@exemplo.com" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="cloudPasswordInput">Senha (mínimo 6 caracteres)</label>
+            <input type="password" id="cloudPasswordInput" required minlength="6" autocomplete="current-password" placeholder="••••••" />
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <button type="submit" class="btn-primary" id="btnCloudSubmit">Entrar na Conta</button>
+            <button type="button" class="btn-sm" id="btnCloudResendEmail" style="display: none;">Reenviar E-mail de Confirmação</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Visão quando LOGADO -->
+      <div id="cloudLoggedInView" style="display: none; flex-direction: column; gap: 12px;">
+        <div class="derived-grid">
+          <div class="derived-item"><span>Conta Conectada</span><strong id="cloudUserEmail">—</strong></div>
+          <div class="derived-item"><span>Última Sincronização</span><strong id="cloudLastSyncText">—</strong></div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" class="btn-primary" id="btnCloudPushNow">Salvar na Nuvem Agora</button>
+          <button type="button" class="btn-cloud" id="btnCloudPullNow">Carregar da Nuvem</button>
+          <button type="button" class="btn-danger" id="btnCloudLogout">Sair da Conta</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnCloseCloudModal">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    /* ========================================================================
-       DADOS ESTÁTICOS DO MUNDO, ORIGENS, VOCAÇÕES, REGIÕES, EQUIPAMENTOS E HABILIDADES
-       ======================================================================== */
     (function () {
       'use strict';
 
+      /* ========================================================================
+         CONFIGURAÇÃO DO SUPABASE (NUVEM DESKTOP & MOBILE)
+         ======================================================================== */
+      const SUPABASE_URL = 'https://fvydrfzhznzfrqasymja.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_uub3WglD1mJAQ92VZlKM6g_2m-eDLeR';
+      const CLOUD_TABLE = 'player_saves';
+
+      let supabaseClient = null;
+      let currentCloudUser = null;
+      let cloudAuthMode = 'login'; // 'login' | 'signup'
+      let cloudSyncInFlight = false;
+      let lastCloudSyncAt = null;
+
+      try {
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true
+            }
+          });
+        }
+      } catch (e) {
+        supabaseClient = null;
+      }
+
       const STORAGE_KEY = 'cronica_das_cinzas_save_v1';
-      const MAX_OFFLINE_SECONDS = 24 * 3600; // 24 horas de cálculo offline
+      const MAX_OFFLINE_SECONDS = 24 * 3600;
 
       const ORIGINS = {
         winterborn: {
@@ -1371,54 +1468,12 @@
       };
 
       const INITIAL_SKILLS = [
-        {
-          id: 'golpe_dilacerante',
-          name: 'Golpe Dilacerante',
-          desc: 'Eleva o dano físico desferido em combate.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        },
-        {
-          id: 'passo_espectral',
-          name: 'Passo Espectral',
-          desc: 'Acelera a cadência de exploração e esquiva.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        },
-        {
-          id: 'chama_contida',
-          name: 'Chama Contida',
-          desc: 'Amplifica o poder arcano contra ameaças sombrias.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        },
-        {
-          id: 'muralha_de_cinzas',
-          name: 'Muralha de Cinzas',
-          desc: 'Reforça a defesa e reduz o impacto de golpes recebidos.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        },
-        {
-          id: 'leitura_de_runas',
-          name: 'Leitura de Runas',
-          desc: 'Aumenta o ganho de experiência e o achado de relíquias.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        },
-        {
-          id: 'resiliencia_inabalavel',
-          name: 'Resiliência Inabalável',
-          desc: 'Acelera a recuperação de vitalidade durante o repouso.',
-          rank: 1,
-          xp: 0,
-          xpNext: 100
-        }
+        { id: 'golpe_dilacerante', name: 'Golpe Dilacerante', desc: 'Eleva o dano físico desferido em combate.', rank: 1, xp: 0, xpNext: 100 },
+        { id: 'passo_espectral', name: 'Passo Espectral', desc: 'Acelera a cadência de exploração e esquiva.', rank: 1, xp: 0, xpNext: 100 },
+        { id: 'chama_contida', name: 'Chama Contida', desc: 'Amplifica o poder arcano contra ameaças sombrias.', rank: 1, xp: 0, xpNext: 100 },
+        { id: 'muralha_de_cinzas', name: 'Muralha de Cinzas', desc: 'Reforça a defesa e reduz o impacto de golpes recebidos.', rank: 1, xp: 0, xpNext: 100 },
+        { id: 'leitura_de_runas', name: 'Leitura de Runas', desc: 'Aumenta o ganho de experiência e o achado de relíquias.', rank: 1, xp: 0, xpNext: 100 },
+        { id: 'resiliencia_inabalavel', name: 'Resiliência Inabalável', desc: 'Acelera a recuperação de vitalidade durante o repouso.', rank: 1, xp: 0, xpNext: 100 }
       ];
 
       const REGIONS = [
@@ -1504,16 +1559,13 @@
         'Caelum da Vigília', 'Helia das Ruínas', 'Bram de Cinza', 'Orin do Abismo'
       ];
 
-      /* ========================================================================
-         ESTADO DO JOGO E INICIALIZAÇÃO
-         ======================================================================== */
       let game = null;
-      const SIM_SPEED = 1; // Travado estritamente em 1x (Tempo Real)
+      const SIM_SPEED = 1;
       let activeLogFilter = 'all';
       let lastFrameTime = performance.now();
       let saveAccumulator = 0;
+      let cloudSaveAccumulator = 0;
 
-      // Estado temporário da criação de personagem
       let draftCreation = {
         name: '',
         originId: 'winterborn',
@@ -1552,7 +1604,7 @@
             level: 1,
             xp: 0,
             xpNext: 100,
-            rankProgress: 0, // 0 a 100 para avançar de patamar/marco
+            rankProgress: 0,
             baseAttrs,
             hp: 100,
             maxHp: 100
@@ -1572,10 +1624,10 @@
             autoAdvance: true
           },
           sim: {
-            state: 'EXPLORING', // EXPLORING | COMBAT | RESTING | FORGING | ADVANCING | STUDYING
-            progress: 0,      // 0.0 a 1.0
-            duration: 24.0,   // segundos simulados necessários para concluir ação atual
-            subProgress: 0,   // 0.0 a 1.0 para sub-etapa encadeada
+            state: 'EXPLORING',
+            progress: 0,
+            duration: 24.0,
+            subProgress: 0,
             subLabel: 'Sondando vestígios na fuligem',
             stance: 'Equilibrada',
             detail: 'Sondando trilhas encobertas por fuligem...',
@@ -1710,12 +1762,11 @@
       }
 
       /* ========================================================================
-         MECÂNICAS DE PROGRESSÃO: XP, NÍVEL, HABILIDADES, EQUIPAMENTOS E REGIÕES
+         MECÂNICAS DE PROGRESSÃO
          ======================================================================== */
       function grantXp(state, rawXp, offlineCollector) {
         const rRunas = getSkillRank(state, 'leitura_de_runas');
         const mult = 1 + (rRunas - 1) * 0.04;
-        // Ritmo solene: ganho de XP reduzido para progressão longa
         let gained = Math.max(1, Math.round(rawXp * 0.42 * mult));
         state.character.xp += gained;
 
@@ -1724,7 +1775,6 @@
           state.character.level += 1;
           state.character.xpNext = Math.round(160 * Math.pow(1.30, state.character.level - 1));
 
-          // Distribuição 100% autônoma de atributos conforme afinidade e necessidade de sobrevivência
           const voc = VOCATIONS[state.character.vocationId] || VOCATIONS.penitent;
           const orig = ORIGINS[state.character.originId] || ORIGINS.winterborn;
           const attrOrder = ['FOR', 'DES', 'VIT', 'INT', 'VON'];
@@ -1743,7 +1793,6 @@
           }
           state.character.baseAttrs[chosenAttr] += 1;
 
-          // Segundo ponto cíclico baseado na vocação
           const secondaryAttr = attrOrder.reduce((best, k) =>
             (voc.mods[k] || 0) > (voc.mods[best] || 0) ? k : best
           , 'VIT');
@@ -1801,7 +1850,6 @@
       }
 
       function findUpgradeableSlot(state) {
-        // Sempre autônomo: prioriza arma, depois armadura, depois relíquia
         const order = ['weapon', 'armor', 'relic'];
         for (const key of order) {
           const item = state.gear[key];
@@ -1823,7 +1871,6 @@
         state.resources.ashes -= cost.ashesCost;
         item.level += 1;
 
-        // A cada 3 níveis de aprimoramento, sobe de raridade até o máximo (Ancestral)
         if (item.level % 3 === 0 && item.rarityIdx < RARITIES.length - 1) {
           item.rarityIdx += 1;
           const namesArr = GEAR_TEMPLATES[slotKey];
@@ -1865,7 +1912,6 @@
               state.unlockedRegionMax = nextIdx;
             }
 
-            // IA decide marchar apenas quando possui poder de combate seguro para a próxima região
             if (combatRating >= safeThreshold) {
               state.regionIndex = nextIdx;
               addLog(
@@ -1903,7 +1949,7 @@
       }
 
       /* ========================================================================
-         MÁQUINA DE ESTADOS AUTÔNOMA (DELTA TIME — RITMO LENTO E SOLENE)
+         MÁQUINA DE ESTADOS AUTÔNOMA
          ======================================================================== */
       function evaluateAutonomousStance(state) {
         const hpRatio = state.character.hp / Math.max(1, state.character.maxHp);
@@ -1922,7 +1968,6 @@
         evaluateAutonomousStance(state);
         state.sim.state = 'EXPLORING';
         state.sim.progress = 0;
-        // ~20s a 28s base (pelo menos 5x mais lento que a versão original)
         state.sim.duration = Math.max(18.0, 27.5 / Math.pow(derived.actionSpeed, 0.55));
         state.sim.subProgress = 0;
         state.sim.subLabel = 'Leitura de rastros e cinzas';
@@ -1937,7 +1982,6 @@
         evaluateAutonomousStance(state);
         state.sim.state = 'COMBAT';
         state.sim.progress = 0;
-        // Turnos de combate lentos (~5.5s por troca de golpes)
         state.sim.duration = 5.6;
         state.sim.subProgress = 0;
         state.sim.subLabel = 'Avaliação de guarda e brechas';
@@ -1951,7 +1995,6 @@
         evaluateAutonomousStance(state);
         state.sim.state = 'RESTING';
         state.sim.progress = 0;
-        // Descanso contemplativo (~24s a 34s)
         state.sim.duration = 28.0;
         state.sim.subProgress = 0;
         state.sim.subLabel = 'Tratamento de ferimentos e vigília';
@@ -1966,7 +2009,6 @@
         evaluateAutonomousStance(state);
         state.sim.state = 'FORGING';
         state.sim.progress = 0;
-        // Forja meticulosa (~30s a 38s)
         state.sim.duration = 32.0;
         state.sim.subProgress = 0;
         state.sim.subLabel = 'Têmpera e ajuste de encaixes';
@@ -1980,7 +2022,6 @@
         evaluateAutonomousStance(state);
         state.sim.state = 'ADVANCING';
         state.sim.progress = 0;
-        // Consolidação de marco (~40s)
         state.sim.duration = 40.0;
         state.sim.subProgress = 0;
         state.sim.subLabel = 'Inscrição de marco e reconhecimento';
@@ -2023,7 +2064,6 @@
           if (sim.progress >= 1.0) {
             sim.progress = 0;
             const region = REGIONS[state.regionIndex] || REGIONS[0];
-            // Progresso regional cadenciado (4 a 6 pontos por exploração completa)
             state.regionMastery = Math.min(region.masteryGoal, state.regionMastery + 5);
             state.character.rankProgress = Math.min(100, Math.round((state.regionMastery / region.masteryGoal) * 100));
 
@@ -2033,7 +2073,6 @@
             state.resources.marks += marksFound;
             state.resources.ashes += ashFound;
 
-            // Chance rara de encontrar fragmento de relíquia
             const relicChance = 0.06 + (getSkillRank(state, 'leitura_de_runas') - 1) * 0.01;
             if (Math.random() < relicChance) {
               state.resources.relics += 1;
@@ -2045,7 +2084,6 @@
               );
             }
 
-            // Decisões 100% autônomas da IA
             const hpRatio = state.character.hp / Math.max(1, state.character.maxHp);
             if (hpRatio < 0.48) {
               enterRestingState(state, 'Vitalidade desgastada; recolheu-se para recobrar forças.', offlineCollector);
@@ -2091,7 +2129,6 @@
             const stanceAtkMult = sim.stance.startsWith('Ofensiva') ? 1.15 : (sim.stance.startsWith('Cautelosa') ? 0.88 : 1.0);
             const stanceDefMult = sim.stance.startsWith('Cautelosa') ? 1.22 : (sim.stance.startsWith('Ofensiva') ? 0.90 : 1.0);
 
-            // Golpe do peregrino
             const isCrit = Math.random() * 100 < derived.critChance;
             const rawAtk = (derived.physAtk + derived.arcanePower * 0.55) * stanceAtkMult;
             const dmgDealt = Math.max(2, Math.round((rawAtk - enemy.def * 0.45) * (isCrit ? 1.6 : 1.0)));
@@ -2129,7 +2166,6 @@
               return;
             }
 
-            // Contra-ataque do adversário
             const hazardMitigation = 1 - (derived.hazardResist / 100) * 0.25;
             const effectiveDef = derived.defense * stanceDefMult;
             const dmgTaken = Math.max(1, Math.round((enemy.atk - effectiveDef * 0.55) * hazardMitigation));
@@ -2138,7 +2174,6 @@
 
             sim.detail = `Troca golpes contra ${enemy.name} (${enemy.hp}/${enemy.maxHp} PV) · Sofreu ${dmgTaken} de dano.`;
 
-            // Recuo tático autônomo quando PV cai abaixo de 28%
             if (state.character.hp <= Math.max(8, Math.round(state.character.maxHp * 0.28))) {
               addLog(
                 state,
@@ -2151,7 +2186,6 @@
           }
         } else if (sim.state === 'RESTING') {
           grantSkillXp(state, 'resiliencia_inabalavel', dtSeconds * 0.9, offlineCollector);
-          // Cura gradual ao longo dos ~28s de repouso
           const healPerSec = (state.character.maxHp * 0.032) * derived.restEfficiency;
           state.character.hp = Math.min(state.character.maxHp, state.character.hp + healPerSec * dtSeconds);
 
@@ -2159,7 +2193,6 @@
             state.character.hp = Math.min(state.character.maxHp, Math.round(state.character.hp));
             enterExploringState(state);
           } else if (sim.progress >= 1.0) {
-            // Se ainda estiver muito ferido, continua descansando em novo ciclo
             sim.progress = 0;
             sim.detail = 'Ferimentos profundos exigem vigília prolongada junto às cinzas...';
           }
@@ -2186,7 +2219,7 @@
       }
 
       /* ========================================================================
-         PERSISTÊNCIA, PROGRESSO OFFLINE E EXPORTAÇÃO / IMPORTAÇÃO
+         PERSISTÊNCIA LOCAL, OFFLINE E SINCRONIZAÇÃO EM NUVEM (SUPABASE)
          ======================================================================== */
       function saveToLocalStorage(state) {
         if (!state) return;
@@ -2210,6 +2243,216 @@
         }
       }
 
+      function setCloudStatusUI(mode, labelText) {
+        const dot = document.getElementById('cloudStatusDot');
+        const txt = document.getElementById('cloudStatusText');
+        if (!dot || !txt) return;
+        dot.className = 'status-dot' + (mode === 'connected' ? '' : ` ${mode}`);
+        txt.textContent = labelText;
+      }
+
+      function setCloudFeedback(message, type) {
+        const box = document.getElementById('cloudFeedbackBox');
+        if (!box) return;
+        if (!message) {
+          box.className = 'cloud-feedback';
+          box.textContent = '';
+          return;
+        }
+        box.textContent = message;
+        box.className = 'cloud-feedback visible' + (type ? ` ${type}` : '');
+      }
+
+      function updateCloudModalView() {
+        const loggedOutEl = document.getElementById('cloudLoggedOutView');
+        const loggedInEl = document.getElementById('cloudLoggedInView');
+        const emailEl = document.getElementById('cloudUserEmail');
+        const syncEl = document.getElementById('cloudLastSyncText');
+
+        if (currentCloudUser) {
+          loggedOutEl.style.display = 'none';
+          loggedInEl.style.display = 'flex';
+          emailEl.textContent = currentCloudUser.email || 'Conectado';
+          syncEl.textContent = lastCloudSyncAt
+            ? new Date(lastCloudSyncAt).toLocaleTimeString('pt-BR')
+            : 'Aguardando envio';
+          setCloudStatusUI('connected', `Nuvem: ${currentCloudUser.email}`);
+        } else {
+          loggedOutEl.style.display = 'flex';
+          loggedInEl.style.display = 'none';
+          setCloudStatusUI('offline', 'Nuvem: Desconectado');
+        }
+      }
+
+      function setCloudAuthMode(mode) {
+        cloudAuthMode = mode;
+        const btnLogin = document.getElementById('btnTabCloudLogin');
+        const btnSignup = document.getElementById('btnTabCloudSignup');
+        const submitBtn = document.getElementById('btnCloudSubmit');
+        const passInput = document.getElementById('cloudPasswordInput');
+
+        btnLogin.classList.toggle('active-toggle', mode === 'login');
+        btnSignup.classList.toggle('active-toggle', mode === 'signup');
+
+        if (mode === 'login') {
+          submitBtn.textContent = 'Entrar na Conta';
+          passInput.setAttribute('autocomplete', 'current-password');
+        } else {
+          submitBtn.textContent = 'Criar Conta (Enviar Confirmação)';
+          passInput.setAttribute('autocomplete', 'new-password');
+        }
+        setCloudFeedback('', '');
+      }
+
+      async function pushSaveToCloud(state, silent) {
+        if (!supabaseClient || !currentCloudUser || !state) return false;
+        if (cloudSyncInFlight) return false;
+
+        cloudSyncInFlight = true;
+        setCloudStatusUI('syncing', 'Nuvem: Sincronizando...');
+        try {
+          state.lastSavedAt = Date.now();
+          const payload = {
+            user_id: currentCloudUser.id,
+            character_name: state.character.name,
+            game_data: state,
+            updated_at: new Date(state.lastSavedAt).toISOString()
+          };
+
+          const { error } = await supabaseClient
+            .from(CLOUD_TABLE)
+            .upsert(payload, { onConflict: 'user_id' });
+
+          if (error) throw error;
+
+          lastCloudSyncAt = Date.now();
+          updateCloudModalView();
+          if (!silent) {
+            setCloudFeedback('Progresso gravado com segurança na nuvem.', 'ok');
+            showNotice('Progresso sincronizado na nuvem.');
+          }
+          return true;
+        } catch (err) {
+          setCloudStatusUI('error', 'Nuvem: Falha ao salvar');
+          if (!silent) {
+            setCloudFeedback('Erro ao salvar na nuvem: ' + (err.message || 'verifique sua conexão.'), 'err');
+          }
+          return false;
+        } finally {
+          cloudSyncInFlight = false;
+        }
+      }
+
+      async function pullSaveFromCloud(options) {
+        const opts = options || {};
+        if (!supabaseClient || !currentCloudUser) return null;
+
+        setCloudStatusUI('syncing', 'Nuvem: Buscando save...');
+        try {
+          const { data, error } = await supabaseClient
+            .from(CLOUD_TABLE)
+            .select('game_data, updated_at')
+            .eq('user_id', currentCloudUser.id)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          updateCloudModalView();
+
+          if (!data || !data.game_data || !data.game_data.character) {
+            if (!opts.silent) {
+              setCloudFeedback('Nenhum save encontrado na nuvem para esta conta ainda.', '');
+            }
+            return null;
+          }
+
+          const cloudState = data.game_data;
+          const cloudSavedAt = cloudState.lastSavedAt || new Date(data.updated_at).getTime() || 0;
+          const localSavedAt = (game && game.lastSavedAt) ? game.lastSavedAt : 0;
+
+          if (opts.force || !game || cloudSavedAt > localSavedAt + 3000) {
+            game = cloudState;
+            const offlineReport = processOfflineCatchUp(game);
+            saveToLocalStorage(game);
+            closeCreationModal();
+            renderHud();
+            if (offlineReport) {
+              openOfflineReportModal(offlineReport);
+            }
+            if (!opts.silent) {
+              setCloudFeedback('Progresso carregado da nuvem com sucesso!', 'ok');
+              showNotice('Crônica carregada da nuvem.');
+            }
+          } else if (game && localSavedAt >= cloudSavedAt) {
+            await pushSaveToCloud(game, true);
+            if (!opts.silent) {
+              setCloudFeedback('Seu save local estava mais recente e foi enviado para a nuvem.', 'ok');
+            }
+          }
+
+          return cloudState;
+        } catch (err) {
+          setCloudStatusUI('error', 'Nuvem: Erro de leitura');
+          if (!opts.silent) {
+            setCloudFeedback('Erro ao carregar da nuvem: ' + (err.message || 'tente novamente.'), 'err');
+          }
+          return null;
+        }
+      }
+
+      function translateSupabaseAuthError(err) {
+        const msg = (err && err.message) ? err.message : '';
+        if (/Invalid login credentials/i.test(msg)) {
+          return 'E-mail ou senha incorretos.';
+        }
+        if (/Email not confirmed/i.test(msg)) {
+          return 'Seu e-mail ainda não foi confirmado. Abra sua caixa de entrada e clique no link enviado antes de entrar.';
+        }
+        if (/User already registered/i.test(msg)) {
+          return 'Este e-mail já está cadastrado. Use a aba "Entrar".';
+        }
+        if (/Password should be at least/i.test(msg)) {
+          return 'A senha deve conter pelo menos 6 caracteres.';
+        }
+        if (/rate limit/i.test(msg)) {
+          return 'Muitas tentativas em sequência. Aguarde alguns instantes e tente novamente.';
+        }
+        return msg || 'Não foi possível concluir a operação na nuvem.';
+      }
+
+      async function initSupabaseSession() {
+        if (!supabaseClient) {
+          setCloudStatusUI('error', 'Nuvem: SDK indisponível');
+          return;
+        }
+
+        try {
+          const { data } = await supabaseClient.auth.getSession();
+          if (data && data.session && data.session.user) {
+            currentCloudUser = data.session.user;
+            updateCloudModalView();
+            await pullSaveFromCloud({ silent: true, force: false });
+          } else {
+            updateCloudModalView();
+          }
+
+          supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            if (session && session.user) {
+              currentCloudUser = session.user;
+              updateCloudModalView();
+              if (event === 'SIGNED_IN') {
+                await pullSaveFromCloud({ silent: true, force: false });
+              }
+            } else {
+              currentCloudUser = null;
+              updateCloudModalView();
+            }
+          });
+        } catch (err) {
+          setCloudStatusUI('offline', 'Nuvem: Desconectado');
+        }
+      }
+
       function processOfflineCatchUp(state) {
         const now = Date.now();
         const last = state.lastSavedAt || now;
@@ -2222,7 +2465,6 @@
         const startAshes = state.resources.ashes;
         const highlights = [];
 
-        // Simula em passos de 1 segundo para estabilidade e precisão
         const stepSize = 1.0;
         let remaining = simulatedSec;
         while (remaining > 0) {
@@ -2291,14 +2533,12 @@
         const region = REGIONS[game.regionIndex] || REGIONS[0];
         const derived = computeDerivedStats(game);
 
-        // Cabeçalho & Identidade
         document.getElementById('hudLevelTag').textContent = `Nível ${c.level}`;
         document.getElementById('hudCharName').textContent = c.name;
         document.getElementById('hudCharOriginVocation').textContent = `${origin.name} · ${vocation.name}`;
         document.getElementById('hudCharRank').textContent = `Patamar: ${getCurrentRankTitle(c.level)}`;
         document.getElementById('hudCycleClock').textContent = formatClock(game.elapsedWorldSec);
 
-        // Barras principais
         const hpNow = Math.max(0, Math.round(c.hp));
         const hpMax = Math.max(1, Math.round(c.maxHp));
         const hpPct = Math.min(100, Math.max(0, (hpNow / hpMax) * 100));
@@ -2313,12 +2553,10 @@
         document.getElementById('hudRankText').textContent = `${rankPct}%`;
         document.getElementById('hudRankBar').style.width = `${rankPct}%`;
 
-        // Recursos
         document.getElementById('hudMarks').textContent = String(game.resources.marks);
         document.getElementById('hudAshes').textContent = String(game.resources.ashes);
         document.getElementById('hudRelics').textContent = String(game.resources.relics);
 
-        // Atributos base
         document.getElementById('hudBaseStats').innerHTML = ATTR_META.map(m => `
           <div class="stat-cell" title="${escapeHtml(m.desc)}">
             <span class="stat-abbr">${m.key}</span>
@@ -2326,7 +2564,6 @@
           </div>
         `).join('');
 
-        // Atributos derivados
         document.getElementById('hudDerivedStats').innerHTML = `
           <div class="derived-item"><span>Ataque Físico</span><strong>${derived.physAtk}</strong></div>
           <div class="derived-item"><span>Poder Arcano</span><strong>${derived.arcanePower}</strong></div>
@@ -2336,7 +2573,6 @@
           <div class="derived-item"><span>Res. Perigos</span><strong>${derived.hazardResist}%</strong></div>
         `;
 
-        // Estado Autônomo
         const stateLabels = {
           EXPLORING: 'Explorando a Região',
           COMBAT: 'Em Combate',
@@ -2373,7 +2609,6 @@
         document.getElementById('subStepBar').style.width = `${subPct}%`;
         document.getElementById('hudTacticalStance').textContent = game.sim.stance || 'Vigilante';
 
-        // Painel de Adversário quando em Combate
         const enemyCard = document.getElementById('enemyCard');
         const en = game.sim.enemy;
         if (game.sim.state === 'COMBAT' && en) {
@@ -2388,7 +2623,6 @@
           enemyCard.style.display = 'none';
         }
 
-        // Região e Marcos
         document.getElementById('hudThreatLevel').textContent = region.threatRoman;
         document.getElementById('hudRegionName').textContent = region.name;
         document.getElementById('hudRegionDesc').textContent = region.desc;
@@ -2412,7 +2646,6 @@
           `;
         }).join('');
 
-        // Equipamentos (100% autônomos, sem botões manuais de forja)
         document.getElementById('gearListContainer').innerHTML = ['weapon', 'armor', 'relic'].map(slotKey => {
           const item = game.gear[slotKey];
           const rarityName = RARITIES[item.rarityIdx] || 'Comum';
@@ -2433,7 +2666,6 @@
           `;
         }).join('');
 
-        // Habilidades
         document.getElementById('skillsListContainer').innerHTML = game.skills.map(sk => {
           const sPct = Math.min(100, Math.max(0, (sk.xp / Math.max(1, sk.xpNext)) * 100));
           return `
@@ -2450,7 +2682,6 @@
           `;
         }).join('');
 
-        // Crônica de Eventos
         const filteredLogs = activeLogFilter === 'all'
           ? game.logs
           : game.logs.filter(l => l.category === activeLogFilter);
@@ -2549,7 +2780,6 @@
       function bindEvents() {
         document.getElementById('btnDismissNotice').addEventListener('click', hideNotice);
 
-        // Filtros do log (apenas leitura/visualização da crônica)
         document.getElementById('logFilterBar').addEventListener('click', (e) => {
           const btn = e.target.closest('[data-filter]');
           if (!btn) return;
@@ -2561,6 +2791,11 @@
         });
 
         // Modal de Criação
+        document.getElementById('btnCreationOpenCloud').addEventListener('click', () => {
+          updateCloudModalView();
+          document.getElementById('cloudModal').classList.add('open');
+        });
+
         document.getElementById('btnRandomName').addEventListener('click', () => {
           const pick = NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)];
           draftCreation.name = pick;
@@ -2621,8 +2856,142 @@
           game = createNewGameState(draftCreation);
           enterExploringState(game);
           saveToLocalStorage(game);
+          if (currentCloudUser) {
+            pushSaveToCloud(game, true);
+          }
           closeCreationModal();
           renderHud();
+        });
+
+        // Modal Conta / Nuvem (Supabase)
+        document.getElementById('btnOpenCloudModal').addEventListener('click', () => {
+          updateCloudModalView();
+          setCloudFeedback('', '');
+          document.getElementById('cloudModal').classList.add('open');
+        });
+
+        document.getElementById('btnCloseCloudModal').addEventListener('click', () => {
+          document.getElementById('cloudModal').classList.remove('open');
+        });
+
+        document.getElementById('btnTabCloudLogin').addEventListener('click', () => {
+          setCloudAuthMode('login');
+        });
+
+        document.getElementById('btnTabCloudSignup').addEventListener('click', () => {
+          setCloudAuthMode('signup');
+        });
+
+        document.getElementById('cloudAuthForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!supabaseClient) {
+            setCloudFeedback('Cliente Supabase indisponível. Verifique sua conexão com a internet.', 'err');
+            return;
+          }
+
+          const email = document.getElementById('cloudEmailInput').value.trim();
+          const password = document.getElementById('cloudPasswordInput').value;
+          const submitBtn = document.getElementById('btnCloudSubmit');
+          const resendBtn = document.getElementById('btnCloudResendEmail');
+
+          if (!email || !password) return;
+
+          submitBtn.disabled = true;
+          resendBtn.style.display = 'none';
+          setCloudFeedback(cloudAuthMode === 'login' ? 'Autenticando...' : 'Registrando conta e enviando confirmação...', '');
+
+          try {
+            if (cloudAuthMode === 'signup') {
+              const redirectUrl = window.location.origin + window.location.pathname;
+              const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                  emailRedirectTo: redirectUrl
+                }
+              });
+              if (error) throw error;
+
+              if (data && data.user && !data.session) {
+                setCloudFeedback(
+                  'Cadastro realizado! Enviamos um link de confirmação para ' + email + '. Abra seu e-mail, clique no link de confirmação e depois entre na aba "Entrar".',
+                  'ok'
+                );
+                resendBtn.style.display = 'inline-flex';
+                setCloudAuthMode('login');
+                setCloudFeedback(
+                  'Cadastro realizado! Enviamos um link de confirmação para ' + email + '. Abra seu e-mail, confirme o cadastro e entre abaixo.',
+                  'ok'
+                );
+              } else if (data && data.session && data.user) {
+                currentCloudUser = data.user;
+                updateCloudModalView();
+                if (game) await pushSaveToCloud(game, true);
+                setCloudFeedback('Conta criada e conectada com sucesso!', 'ok');
+              }
+            } else {
+              const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+              });
+              if (error) throw error;
+
+              if (data && data.user) {
+                currentCloudUser = data.user;
+                updateCloudModalView();
+                await pullSaveFromCloud({ silent: false, force: false });
+              }
+            }
+          } catch (err) {
+            const friendly = translateSupabaseAuthError(err);
+            setCloudFeedback(friendly, 'err');
+            if (/não foi confirmado/i.test(friendly)) {
+              resendBtn.style.display = 'inline-flex';
+            }
+          } finally {
+            submitBtn.disabled = false;
+          }
+        });
+
+        document.getElementById('btnCloudResendEmail').addEventListener('click', async () => {
+          if (!supabaseClient) return;
+          const email = document.getElementById('cloudEmailInput').value.trim();
+          if (!email) {
+            setCloudFeedback('Informe seu e-mail no campo acima para reenviar a confirmação.', 'err');
+            return;
+          }
+          try {
+            const { error } = await supabaseClient.auth.resend({
+              type: 'signup',
+              email
+            });
+            if (error) throw error;
+            setCloudFeedback('Novo e-mail de confirmação enviado para ' + email + '.', 'ok');
+          } catch (err) {
+            setCloudFeedback(translateSupabaseAuthError(err), 'err');
+          }
+        });
+
+        document.getElementById('btnCloudPushNow').addEventListener('click', async () => {
+          if (!game) {
+            setCloudFeedback('Crie ou inicie um peregrino antes de enviar para a nuvem.', 'err');
+            return;
+          }
+          saveToLocalStorage(game);
+          await pushSaveToCloud(game, false);
+        });
+
+        document.getElementById('btnCloudPullNow').addEventListener('click', async () => {
+          await pullSaveFromCloud({ silent: false, force: true });
+        });
+
+        document.getElementById('btnCloudLogout').addEventListener('click', async () => {
+          if (!supabaseClient) return;
+          await supabaseClient.auth.signOut();
+          currentCloudUser = null;
+          lastCloudSyncAt = null;
+          updateCloudModalView();
+          setCloudFeedback('Sessão encerrada neste dispositivo.', '');
         });
 
         // Modal Offline
@@ -2688,7 +3057,7 @@
           }
         });
 
-        document.getElementById('btnImportSave').addEventListener('click', () => {
+        document.getElementById('btnImportSave').addEventListener('click', async () => {
           const raw = document.getElementById('saveJsonArea').value.trim();
           if (!raw) {
             showNotice('Cole um código de salvamento válido antes de restaurar.');
@@ -2701,33 +3070,15 @@
             }
             game = imported;
             saveToLocalStorage(game);
+            if (currentCloudUser) {
+              await pushSaveToCloud(game, true);
+            }
             closeCreationModal();
             document.getElementById('saveModal').classList.remove('open');
             renderHud();
             showNotice('Progresso restaurado com sucesso a partir do código.');
           } catch (err) {
             showNotice('Falha ao restaurar: o código fornecido é inválido ou está corrompido.');
-          }
-        });
-
-        document.getElementById('btnImportSave').addEventListener('click', () => {
-          const raw = document.getElementById('saveJsonArea').value.trim();
-          if (!raw) {
-            showNotice('Cole um código JSON válido antes de importar.');
-            return;
-          }
-          try {
-            const imported = JSON.parse(raw);
-            if (!imported || !imported.character || !imported.sim || !imported.skills) {
-              throw new Error('Estrutura inválida');
-            }
-            game = imported;
-            saveToLocalStorage(game);
-            document.getElementById('saveModal').classList.remove('open');
-            renderHud();
-            showNotice('Crônica importada com sucesso.');
-          } catch (err) {
-            showNotice('Falha ao importar: o JSON fornecido é inválido ou está incompleto.');
           }
         });
 
@@ -2763,7 +3114,12 @@
           if (game) saveToLocalStorage(game);
         });
         document.addEventListener('visibilitychange', () => {
-          if (document.hidden && game) saveToLocalStorage(game);
+          if (document.hidden && game) {
+            saveToLocalStorage(game);
+            if (currentCloudUser) {
+              pushSaveToCloud(game, true);
+            }
+          }
         });
       }
 
@@ -2775,10 +3131,20 @@
           const effectiveDt = rawDt * SIM_SPEED;
           stepSimulation(game, effectiveDt);
           saveAccumulator += rawDt;
+          cloudSaveAccumulator += rawDt;
+
           if (saveAccumulator >= 5.0) {
             saveAccumulator = 0;
             saveToLocalStorage(game);
           }
+
+          if (cloudSaveAccumulator >= 25.0) {
+            cloudSaveAccumulator = 0;
+            if (currentCloudUser) {
+              pushSaveToCloud(game, true);
+            }
+          }
+
           renderHud();
         }
 
@@ -2788,7 +3154,7 @@
       /* ========================================================================
          INICIALIZAÇÃO
          ======================================================================== */
-      window.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener('DOMContentLoaded', async () => {
         bindEvents();
 
         const saved = loadFromLocalStorage();
@@ -2805,6 +3171,8 @@
           openCreationModal();
         }
 
+        await initSupabaseSession();
+
         lastFrameTime = performance.now();
         requestAnimationFrame(mainLoop);
       });
@@ -2812,4 +3180,3 @@
   </script>
 </body>
 </html>
-```
